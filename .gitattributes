@@ -1,0 +1,26 @@
+# Maven / Java
+target/
+*.class
+*.log
+
+# IntelliJ / Eclipse / VS Code
+.idea/
+*.iml
+.project
+.classpath
+.settings/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local uploads (if you store files)
+uploads/
+
+# Secrets (choose one approach below)
+# Option A: ignore your whole application.properties if it contains secrets:
+src/main/resources/application.properties
+
+# Option B (better): keep application.properties, but ignore a separate secrets file:
+# src/main/resources/application-secrets.properties

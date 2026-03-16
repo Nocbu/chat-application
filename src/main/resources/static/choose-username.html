@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Choose Username</title>
+    <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+<div class="auth-page">
+    <div class="auth-card">
+        <h2 class="auth-title">Choose a username</h2>
+        <p class="auth-subtitle">
+            This username is unique and will be used for admin actions (ban/unban/kick) and for identifying you in the system.
+        </p>
+
+        <div id="auth-message" class="auth-message hidden"></div>
+
+        <form id="usernameForm" class="auth-form">
+            <label class="auth-label" for="username">Username</label>
+            <input
+                    id="username"
+                    type="text"
+                    class="auth-input"
+                    placeholder="e.g. kishan_07"
+                    autocomplete="off"
+                    required
+            />
+
+            <div class="hint-box">
+                <div class="hint-title">Rules</div>
+                <ul class="hint-list">
+                    <li>3–20 characters</li>
+                    <li>Only letters, numbers, dot (.) and underscore (_)</li>
+                    <li>Must be unique</li>
+                </ul>
+            </div>
+
+            <button type="submit" class="auth-btn">Save & Continue</button>
+
+            <div class="auth-footer">
+                <span>Tip:</span> choose something simple—this is your unique handle.
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="/js/choose-username.js"></script>
+</body>
+</html>

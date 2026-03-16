@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Room</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="chat-page">
+    <div class="chat-container">
+
+        <!-- Chat Header -->
+        <div class="chat-header">
+            <div class="header-left">
+                <h2>💬 Chat Room</h2>
+                <span id="user-info" class="user-info"></span>
+            </div>
+            <div class="header-right">
+                <span id="connecting" class="connecting">Connecting...</span>
+                <button id="logoutBtn" class="btn btn-small btn-logout">Logout</button>
+            </div>
+        </div>
+
+        <!-- Admin Panel (hidden for normal users) -->
+        <div id="admin-panel" class="admin-panel hidden">
+            <div class="admin-header">
+                <h3>🛡️ Admin Controls</h3>
+                <button id="toggleAdmin" class="btn btn-small">Toggle Panel</button>
+            </div>
+            <div id="admin-controls" class="admin-controls">
+                <button id="clearChatBtn" class="btn btn-danger btn-small">🗑️ Clear All Chat</button>
+                <div class="admin-user-action">
+                    <input type="text" id="banUserEmail" placeholder="Enter username to ban/unban/kick" class="form-control-sm" />
+                    <button id="banUserBtn" class="btn btn-danger btn-small">Ban</button>
+                    <button id="unbanUserBtn" class="btn btn-warning btn-small">Unban</button>
+                    <button id="kickUserBtn" class="btn btn-warning btn-small">Kick</button>
+                </div>
+                <div class="admin-stats">
+                    <button id="viewUsersBtn" class="btn btn-small">👥 View Users</button>
+                    <button id="viewStatsBtn" class="btn btn-small">📊 Stats</button>
+                </div>
+                <div id="admin-output" class="admin-output hidden"></div>
+            </div>
+        </div>
+
+        <!-- Message Area -->
+        <ul id="messageArea"></ul>
+
+        <!-- Message Input -->
+        <div class="chat-input-area">
+            <form id="messageForm">
+                <div class="input-group">
+                    <!-- File Upload Button -->
+                    <label for="fileInput" class="btn btn-file" title="Attach file">
+                        📎
+                    </label>
+                    <input type="file" id="fileInput" class="hidden"
+                           accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip,.rar" />
+
+                    <!-- Text Input -->
+                    <input type="text" id="message" placeholder="Type a message..."
+                           autocomplete="off" class="form-control" />
+
+                    <!-- Send Button -->
+                    <button type="submit" class="btn btn-primary">Send</button>
+                </div>
+            </form>
+            <!-- File Preview -->
+            <div id="file-preview" class="file-preview hidden">
+                <span id="file-preview-name"></span>
+                <button id="file-preview-cancel" class="btn btn-small btn-danger">✕</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SockJS & STOMP -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+<script src="/js/chat.js"></script>
+</body>
+</html>
