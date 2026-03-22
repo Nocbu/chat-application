@@ -1,6 +1,6 @@
 package com.example.chat_application.controller;
 
-import com.example.chat_application.Repositories.UserRepository; // adjust
+import com.example.chat_application.Repositories.UserRepository;
 import com.example.chat_application.model.User;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.web.bind.annotation.*;
@@ -25,17 +25,21 @@ public class UserSearchController {
 
         if (q == null || q.trim().isEmpty()) return List.of();
 
-        // You need a repo method like:
-        // findTop10ByUsernameContainingIgnoreCase(String q)
         List<User> users = userRepository.findTop10ByUsernameContainingIgnoreCase(q.trim());
 
         return users.stream()
-                .filter(u -> u.getEnabled() == null || u.getEnabled())
-                .filter(u -> myUsername == null || !u.getUsername().equalsIgnoreCase(myUsername))
-                .map(u -> Map.of(
+                // enabled is boolean => just check isEnabled()
+                .filter(User::isEnabled)
+
+                // don't show self
+                .filter(u -> myUsername == null || u.getUsername() == null || !u.getUsername().equalsIgnoreCase(myUsername))
+
+                // map to response
+                .map(u -> Map.<String, Object>of(
                         "username", u.getUsername(),
                         "displayName", u.getDisplayName(),
-                        "pictureUrl", u.getPictureUrl() // if you have it; otherwise remove
+                        // use profilePicture you already have
+                        "pictureUrl", u.getProfilePicture()
                 ))
                 .collect(Collectors.toList());
     }

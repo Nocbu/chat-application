@@ -22,6 +22,12 @@
             </div>
         </div>
 
+        <!-- MODE TABS -->
+        <div class="chat-tabs">
+            <button id="tabGroup" class="chat-tab active">Group</button>
+            <button id="tabDirect" class="chat-tab">Direct</button>
+        </div>
+
         <!-- Admin Panel (hidden for normal users) -->
         <div id="admin-panel" class="admin-panel hidden">
             <div class="admin-header">
@@ -44,38 +50,65 @@
             </div>
         </div>
 
-        <!-- Message Area -->
-        <ul id="messageArea"></ul>
+        <!-- MAIN CONTENT -->
+        <div class="chat-main">
 
-        <!-- Message Input -->
+            <!-- DIRECT SIDEBAR -->
+            <aside id="dmSidebar" class="dm-sidebar hidden">
+                <div class="dm-search">
+                    <input id="dmSearchInput" class="form-control" type="text" placeholder="Search username..." autocomplete="off" />
+                    <div id="dmSearchResults" class="dm-search-results hidden"></div>
+                </div>
+
+                <div class="dm-hint">
+                    Search a username and click to start chatting.
+                </div>
+            </aside>
+
+            <!-- CHAT PANELS -->
+            <section class="chat-panels">
+
+                <!-- GROUP MESSAGES -->
+                <ul id="messageArea"></ul>
+
+                <!-- DIRECT MESSAGES -->
+                <div id="dmPanel" class="dm-panel hidden">
+                    <div class="dm-header">
+                        <div>
+                            <div class="dm-title">Direct Chat</div>
+                            <div id="dmWith" class="dm-subtitle">Pick a user from search</div>
+                        </div>
+                    </div>
+                    <ul id="dmMessageArea"></ul>
+                </div>
+
+            </section>
+        </div>
+
+        <!-- Message Input (used for BOTH group + dm) -->
         <div class="chat-input-area">
             <form id="messageForm">
                 <div class="input-group">
-                    <!-- File Upload Button -->
-                    <label for="fileInput" class="btn btn-file" title="Attach file">
-                        📎
-                    </label>
+                    <label for="fileInput" class="btn btn-file" title="Attach file">📎</label>
                     <input type="file" id="fileInput" class="hidden"
                            accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip,.rar" />
 
-                    <!-- Text Input -->
                     <input type="text" id="message" placeholder="Type a message..."
                            autocomplete="off" class="form-control" />
 
-                    <!-- Send Button -->
                     <button type="submit" class="btn btn-primary">Send</button>
                 </div>
             </form>
-            <!-- File Preview -->
+
             <div id="file-preview" class="file-preview hidden">
                 <span id="file-preview-name"></span>
                 <button id="file-preview-cancel" class="btn btn-small btn-danger">✕</button>
             </div>
         </div>
+
     </div>
 </div>
 
-<!-- SockJS & STOMP -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
 <script src="/js/chat.js"></script>

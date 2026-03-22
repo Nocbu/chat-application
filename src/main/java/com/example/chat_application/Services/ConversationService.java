@@ -1,7 +1,7 @@
 package com.example.chat_application.Services;
 
 import com.example.chat_application.Repositories.ConversationRepository;
-import com.example.chat_application.Repositories.UserRepository; // adjust name if different
+import com.example.chat_application.Repositories.UserRepository;
 import com.example.chat_application.model.User;
 import com.example.chat_application.model.conversation.Conversation;
 import org.springframework.stereotype.Service;
@@ -40,7 +40,9 @@ public class ConversationService {
         // Validate target user exists + enabled
         User target = userRepository.findByUsernameIgnoreCase(targetUsername)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + targetUsername));
-        if (target.getEnabled() != null && !target.getEnabled()) {
+
+        // enabled is boolean => no null checks
+        if (!target.isEnabled()) {
             throw new IllegalArgumentException("User is disabled/banned.");
         }
 
