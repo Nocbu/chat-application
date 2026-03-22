@@ -49,7 +49,7 @@ public class ChatController {
         return chatMessage;
     }
 
-    //join message
+    //join message (BROADCAST ONLY - DO NOT SAVE)
     @MessageMapping("/chat.addUser")
     @SendTo("/topic/public")
     public ChatMessage addUser(@Payload ChatMessage chatMessage,
@@ -58,12 +58,8 @@ public class ChatController {
         headerAccessor.getSessionAttributes().put("username", chatMessage.getSender());
         headerAccessor.getSessionAttributes().put("userEmail", chatMessage.getSenderEmail());
 
-        String plain = chatMessage.getContent();
+        // keep broadcasting JOIN, but don't persist it
         chatMessage.setType(MessageType.JOIN);
-
-        messageService.saveMessage(chatMessage);
-        chatMessage.setContent(plain);
-
         return chatMessage;
     }
 

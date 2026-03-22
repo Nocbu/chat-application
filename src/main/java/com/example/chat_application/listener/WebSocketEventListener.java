@@ -1,4 +1,5 @@
 package com.example.chat_application.listener;
+
 import com.example.chat_application.Services.ChatMessageService;
 import com.example.chat_application.model.ChatMessage;
 import com.example.chat_application.model.MessageType;
@@ -20,7 +21,7 @@ public class WebSocketEventListener {
     private SimpMessageSendingOperations messagingTemplate;
 
     @Autowired
-    private ChatMessageService messageService;
+    private ChatMessageService messageService; // can be removed if you want, but not required
 
     @EventListener
     public void handleWebSocketDisconnectListener(SessionDisconnectEvent event) {
@@ -35,7 +36,7 @@ public class WebSocketEventListener {
             chatMessage.setSender(username);
             chatMessage.setContent(username + " left the chat!");
 
-            messageService.saveMessage(chatMessage);
+            // BROADCAST ONLY - DO NOT SAVE
             messagingTemplate.convertAndSend("/topic/public", chatMessage);
         }
     }

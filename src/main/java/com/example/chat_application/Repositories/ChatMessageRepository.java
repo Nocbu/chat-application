@@ -10,5 +10,6 @@ public interface ChatMessageRepository extends MongoRepository<ChatMessage, Stri
     List<ChatMessage> findTop100ByOrderByTimestampDesc();
     List<ChatMessage> findByType(MessageType type);
     List<ChatMessage> findBySenderEmail(String senderEmail);
+    List<ChatMessage> findByScopeAndConversationIdOrderByTimestampAsc(String scope, String conversationId);
     void deleteAllByType(MessageType type);
 }
