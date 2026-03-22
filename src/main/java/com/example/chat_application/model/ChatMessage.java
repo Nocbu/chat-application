@@ -2,21 +2,43 @@ package com.example.chat_application.model;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 @Document(collection = "messages")
 public class ChatMessage {
 
     @Id
     private String id;
+
     private MessageType type;
     private String content;
-    private String sender;
+
+    // Existing group-chat fields (keep)
+    private String sender;       // display name (what you show in UI)
     private String senderEmail;
+
+    // New: username-based identity (needed for DMs + delete-for-everyone rules)
+    private String senderUsername;
+
+    // New: message scope (PUBLIC or DIRECT)
+    private String scope = "PUBLIC";
+
+    // New: conversation id for DIRECT messages
+    private String conversationId;
+
+    // Files
     private String fileId;       // reference to FileAttachment if type=FILE
     private String fileName;
     private String fileType;
     private long fileSize;
+
+    // Deletion flags (DIRECT only, but safe to keep on all)
+    private boolean deletedForEveryone = false;
+    private Set<String> deletedFor = new HashSet<>();
+
     private LocalDateTime timestamp;
 
     public ChatMessage() {
@@ -30,7 +52,8 @@ public class ChatMessage {
         this.timestamp = LocalDateTime.now();
     }
 
-    // Getters and Setters
+    // --- Getters and Setters ---
+
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
 
@@ -46,6 +69,15 @@ public class ChatMessage {
     public String getSenderEmail() { return senderEmail; }
     public void setSenderEmail(String senderEmail) { this.senderEmail = senderEmail; }
 
+    public String getSenderUsername() { return senderUsername; }
+    public void setSenderUsername(String senderUsername) { this.senderUsername = senderUsername; }
+
+    public String getScope() { return scope; }
+    public void setScope(String scope) { this.scope = scope; }
+
+    public String getConversationId() { return conversationId; }
+    public void setConversationId(String conversationId) { this.conversationId = conversationId; }
+
     public String getFileId() { return fileId; }
     public void setFileId(String fileId) { this.fileId = fileId; }
 
@@ -57,6 +89,14 @@ public class ChatMessage {
 
     public long getFileSize() { return fileSize; }
     public void setFileSize(long fileSize) { this.fileSize = fileSize; }
+
+    public boolean isDeletedForEveryone() { return deletedForEveryone; }
+    public void setDeletedForEveryone(boolean deletedForEveryone) { this.deletedForEveryone = deletedForEveryone; }
+
+    public Set<String> getDeletedFor() { return deletedFor; }
+    public void setDeletedFor(Set<String> deletedFor) {
+        this.deletedFor = (deletedFor == null) ? new HashSet<>() : deletedFor;
+    }
 
     public LocalDateTime getTimestamp() { return timestamp; }
     public void setTimestamp(LocalDateTime timestamp) { this.timestamp = timestamp; }

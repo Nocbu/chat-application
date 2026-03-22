@@ -2,6 +2,7 @@ package com.example.chat_application.controller;
 
 import com.example.chat_application.Services.UserService;
 import com.example.chat_application.DTO.SetUsernameRequest;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -20,7 +21,8 @@ public class UserController {
 
     @PostMapping("/username")
     public ResponseEntity<Map<String, Object>> setUsername(@RequestBody SetUsernameRequest req,
-                                                           @AuthenticationPrincipal OAuth2User oAuth2User) {
+                                                           @AuthenticationPrincipal OAuth2User oAuth2User,
+                                                           HttpSession session) {
         Map<String, Object> resp = new HashMap<>();
 
         if (oAuth2User == null) {
@@ -32,10 +34,15 @@ public class UserController {
         String email = oAuth2User.getAttribute("email");
 
         try {
-            userService.setUsernameForEmail(email, req.getUsername());
+            String normalized = req.getUsername().trim().toLowerCase();
+            userService.setUsernameForEmail(email, normalized);
+
+            // IMPORTANT: store username in session for DM endpoints
+            session.setAttribute("username", normalized);
+
             resp.put("success", true);
             resp.put("message", "Username saved");
-            resp.put("username", req.getUsername().trim().toLowerCase());
+            resp.put("username", normalized);
             return ResponseEntity.ok(resp);
         } catch (IllegalArgumentException ex) {
             resp.put("success", false);

@@ -31,9 +31,8 @@ public class UserService {
     @Value("${admin.password}")
     private String adminPassword;
 
-    //register
+    // register
     public AuthResponse register(RegisterRequest request) {
-
 
         String normalizedEmail = request.getEmail() == null
                 ? null
@@ -50,10 +49,16 @@ public class UserService {
         if (userRepository.existsByEmail(normalizedEmail)) {
             return new AuthResponse(false, "An account with this email already exists. Please login instead.");
         }
-        String normalizedUsername = request.getUsername() == null ? null : request.getUsername().trim();
+
+        String normalizedUsername = request.getUsername() == null ? null : request.getUsername().trim().toLowerCase();
 
         if (normalizedUsername == null || normalizedUsername.isBlank()) {
             return new AuthResponse(false, "Username is required");
+        }
+
+        // username format check (same rule you use later)
+        if (!normalizedUsername.matches("^[a-z0-9._]{3,20}$")) {
+            return new AuthResponse(false, "Invalid username format");
         }
 
         if (userRepository.existsByUsername(normalizedUsername)) {
@@ -66,9 +71,9 @@ public class UserService {
             return new AuthResponse(false, String.join(". ", passwordErrors));
         }
 
-        //create user
+        // create user
         User user = new User();
-        user.setEmail(normalizedEmail); // ✅ 3) Save normalized email (important!)
+        user.setEmail(normalizedEmail);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setDisplayName(request.getDisplayName());
         user.setRole(Role.USER);
@@ -83,17 +88,22 @@ public class UserService {
         response.setDisplayName(user.getDisplayName());
         response.setEmail(user.getEmail());
         response.setRole(user.getRole().name());
+        response.setUsername(user.getUsername());
         return response;
     }
 
-    //login email pass admin and user
+    // login
     public AuthResponse login(LoginRequest request) {
 
+        // ADMIN login (username+password)
         if (request.getEmail().equals(adminUsername) && request.getPassword().equals(adminPassword)) {
             AuthResponse response = new AuthResponse(true, "Admin login successful!");
             response.setDisplayName("Admin");
             response.setEmail(adminUsername);
             response.setRole(Role.ADMIN.name());
+
+            // IMPORTANT: set username so DMs can use it
+            response.setUsername(adminUsername.toLowerCase());
             return response;
         }
 
@@ -132,14 +142,17 @@ public class UserService {
         response.setDisplayName(user.getDisplayName());
         response.setEmail(user.getEmail());
         response.setRole(user.getRole().name());
+
+        // IMPORTANT: return username for frontend + session storage
+        response.setUsername(user.getUsername());
+
         return response;
     }
 
-    //google loging
+    // google login
     public User processGoogleUser(String email, String name, String googleId, String picture) {
 
         String normalizedEmail = email == null ? null : email.trim().toLowerCase();
-
         Optional<User> existingUser = userRepository.findByEmail(normalizedEmail);
 
         if (existingUser.isPresent()) {
@@ -163,6 +176,7 @@ public class UserService {
 
         return userRepository.save(user);
     }
+
     public boolean setUsernameForEmail(String email, String username) {
         String normalizedEmail = email == null ? null : email.trim().toLowerCase();
         String normalizedUsername = username == null ? null : username.trim().toLowerCase();
@@ -170,12 +184,10 @@ public class UserService {
         if (normalizedEmail == null || normalizedEmail.isBlank()) return false;
         if (normalizedUsername == null || normalizedUsername.isBlank()) return false;
 
-        //usernmae
         if (!normalizedUsername.matches("^[a-z0-9._]{3,20}$")) {
             throw new IllegalArgumentException("Invalid username format");
         }
 
-        //unique
         if (userRepository.existsByUsername(normalizedUsername)) {
             throw new IllegalArgumentException("Username already taken");
         }
@@ -188,7 +200,7 @@ public class UserService {
         return true;
     }
 
-    //ban unban
+    // ban/unban etc (unchanged)
     public boolean banUser(String email) {
         Optional<User> user = userRepository.findByEmail(email);
         if (user.isPresent()) {
@@ -209,8 +221,6 @@ public class UserService {
         return false;
     }
 
-    //not required now
-
     public boolean banUserByDisplayName(String displayName) {
         Optional<User> user = userRepository.findByDisplayName(displayName);
         if (user.isPresent()) {
@@ -220,6 +230,7 @@ public class UserService {
         }
         return false;
     }
+
     public boolean banUserByUsername(String username) {
         Optional<User> user = userRepository.findByUsername(username);
         if (user.isPresent()) {
@@ -243,7 +254,6 @@ public class UserService {
     public String getEmailByUsername(String username) {
         return userRepository.findByUsername(username).map(User::getEmail).orElse(null);
     }
-
 
     public boolean unbanUserByDisplayName(String displayName) {
         Optional<User> user = userRepository.findByDisplayName(displayName);

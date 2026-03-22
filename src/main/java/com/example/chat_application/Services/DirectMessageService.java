@@ -4,6 +4,7 @@ import com.example.chat_application.Repositories.ChatMessageRepository; // adjus
 import com.example.chat_application.model.ChatMessage;
 import com.example.chat_application.model.MessageType;
 import org.springframework.stereotype.Service;
+import com.example.chat_application.security.cryptoService;
 
 import java.time.Instant;
 import java.util.List;
@@ -37,7 +38,7 @@ public class DirectMessageService {
         // Encrypt content/caption before saving
         String plain = msg.getContent();
         msg.setContent(cryptoService.encryptToString(plain));
-        msg.setTimestamp(Instant.now().toString());
+        msg.setTimestamp(java.time.LocalDateTime.now());
 
         ChatMessage saved = chatMessageRepository.save(msg);
 
