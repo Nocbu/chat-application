@@ -877,6 +877,27 @@ body {
     padding: 20px;
     background: #f5f7fb;
 }
+#dmMessageArea li.chat-message .avatar,
+#dmMessageArea li.file-message .avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 16px;
+    position: absolute;
+    left: 10px;
+    top: 10px;
+}
+/* DM message layout should match group layout */
+#dmMessageArea li.chat-message,
+#dmMessageArea li.file-message {
+    padding-left: 55px;
+    position: relative;
+}
 
 #dmMessageArea li {
     padding: 10px 16px;
