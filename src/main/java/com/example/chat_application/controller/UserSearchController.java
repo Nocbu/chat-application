@@ -5,6 +5,7 @@ import com.example.chat_application.model.User;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -28,19 +29,16 @@ public class UserSearchController {
         List<User> users = userRepository.findTop10ByUsernameContainingIgnoreCase(q.trim());
 
         return users.stream()
-                // enabled is boolean => just check isEnabled()
                 .filter(User::isEnabled)
-
-                // don't show self
-                .filter(u -> myUsername == null || u.getUsername() == null || !u.getUsername().equalsIgnoreCase(myUsername))
-
-                // map to response
-                .map(u -> Map.<String, Object>of(
-                        "username", u.getUsername(),
-                        "displayName", u.getDisplayName(),
-                        // use profilePicture you already have
-                        "pictureUrl", u.getProfilePicture()
-                ))
+                .filter(u -> u.getUsername() != null && !u.getUsername().isBlank())
+                .filter(u -> myUsername == null || !u.getUsername().equalsIgnoreCase(myUsername))
+                .map(u -> {
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("username", u.getUsername());
+                    m.put("displayName", u.getDisplayName() == null ? u.getUsername() : u.getDisplayName());
+                    m.put("pictureUrl", u.getProfilePicture() == null ? "" : u.getProfilePicture());
+                    return m;
+                })
                 .collect(Collectors.toList());
     }
 }
