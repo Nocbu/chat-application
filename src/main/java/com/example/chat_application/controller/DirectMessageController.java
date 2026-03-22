@@ -73,27 +73,29 @@ public class DirectMessageController {
 
     // WS: send direct message
     @MessageMapping("/direct.sendMessage")
-    public void wsSendDirectMessage(@Payload ChatMessage msg, HttpSession session) {
-        String username = (String) session.getAttribute("username");
-        if (username == null) return;
+    public void wsSendDirectMessage(@Payload ChatMessage msg) {
+        String senderUsername = msg.getSenderUsername();
+        if (senderUsername == null || senderUsername.isBlank()) return;
 
         String conversationId = msg.getConversationId();
-        ChatMessage saved = directMessageService.saveDirectMessage(conversationId, msg, username);
+        if (conversationId == null || conversationId.isBlank()) return;
 
+        ChatMessage saved = directMessageService.saveDirectMessage(conversationId, msg, senderUsername.trim().toLowerCase());
         messagingTemplate.convertAndSend("/topic/direct/" + conversationId, saved);
     }
 
     // WS: send direct file message (metadata already uploaded via REST /api/files/upload)
     @MessageMapping("/direct.sendFile")
-    public void wsSendDirectFile(@Payload ChatMessage msg, HttpSession session) {
-        String username = (String) session.getAttribute("username");
-        if (username == null) return;
+    public void wsSendDirectFile(@Payload ChatMessage msg) {
+        String senderUsername = msg.getSenderUsername();
+        if (senderUsername == null || senderUsername.isBlank()) return;
 
         String conversationId = msg.getConversationId();
-        // Ensure type FILE
+        if (conversationId == null || conversationId.isBlank()) return;
+
         msg.setType(com.example.chat_application.model.MessageType.FILE);
 
-        ChatMessage saved = directMessageService.saveDirectMessage(conversationId, msg, username);
+        ChatMessage saved = directMessageService.saveDirectMessage(conversationId, msg, senderUsername.trim().toLowerCase());
         messagingTemplate.convertAndSend("/topic/direct/" + conversationId, saved);
     }
 }
