@@ -20,7 +20,6 @@ public class ChatMessageService {
     private cryptoService cryptoService;
 
     public ChatMessage saveMessage(ChatMessage message) {
-        // Encrypt only the text field stored in DB
         if (message.getContent() != null && !message.getContent().isBlank()) {
             message.setContent(cryptoService.encryptToString(message.getContent()));
         }
@@ -31,7 +30,7 @@ public class ChatMessageService {
         List<ChatMessage> messages = messageRepository.findTop100ByOrderByTimestampDesc();
         Collections.reverse(messages);
 
-        // Decrypt for UI
+        //decrypt
         for (ChatMessage m : messages) {
             if (m.getContent() != null && !m.getContent().isBlank()) {
                 m.setContent(cryptoService.decryptToString(m.getContent()));

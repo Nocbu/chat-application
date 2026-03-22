@@ -23,39 +23,33 @@ public class ChatController {
     @Autowired
     private ChatMessageService messageService;
 
-    /**
-     * Handle chat messages — save to DB + broadcast
-     */
+    //message save to db
     @MessageMapping("/chat.sendMessage")
     @SendTo("/topic/public")
     public ChatMessage sendMessage(@Payload ChatMessage chatMessage) {
-        String plain = chatMessage.getContent();  // keep for UI
+        String plain = chatMessage.getContent();
         chatMessage.setType(MessageType.CHAT);
 
-        messageService.saveMessage(chatMessage);  // encrypts before DB save
+        messageService.saveMessage(chatMessage);
 
-        chatMessage.setContent(plain);            // restore plaintext for broadcast
+        chatMessage.setContent(plain);
         return chatMessage;
     }
 
-    /**
-     * Handle file messages — broadcast file info
-     */
+    //files
     @MessageMapping("/chat.sendFile")
     @SendTo("/topic/public")
     public ChatMessage sendFileMessage(@Payload ChatMessage chatMessage) {
-        String plainCaption = chatMessage.getContent(); // optional caption
+        String plainCaption = chatMessage.getContent();
         chatMessage.setType(MessageType.FILE);
 
-        messageService.saveMessage(chatMessage);        // encrypts caption if present
+        messageService.saveMessage(chatMessage);
 
-        chatMessage.setContent(plainCaption);           // restore caption plaintext for broadcast
+        chatMessage.setContent(plainCaption);
         return chatMessage;
     }
 
-    /**
-     * Handle user join
-     */
+    //join message
     @MessageMapping("/chat.addUser")
     @SendTo("/topic/public")
     public ChatMessage addUser(@Payload ChatMessage chatMessage,
@@ -64,19 +58,16 @@ public class ChatController {
         headerAccessor.getSessionAttributes().put("username", chatMessage.getSender());
         headerAccessor.getSessionAttributes().put("userEmail", chatMessage.getSenderEmail());
 
-        String plain = chatMessage.getContent();   // might be null, fine
+        String plain = chatMessage.getContent();
         chatMessage.setType(MessageType.JOIN);
 
-        messageService.saveMessage(chatMessage);   // encrypts if content exists
+        messageService.saveMessage(chatMessage);
         chatMessage.setContent(plain);
 
         return chatMessage;
     }
 
-    /**
-     * REST endpoint to load chat history
-     * GET /api/messages/history
-     */
+    //history
     @GetMapping("/api/messages/history")
     @ResponseBody
     public ResponseEntity<List<ChatMessage>> getChatHistory() {

@@ -38,7 +38,7 @@ public class AdminController {
 
     @Value("${admin.password}")
     private String adminPassword;
-
+    //admin action
     @PostMapping("/action")
     public ResponseEntity<Map<String, Object>> performAction(
             @RequestBody AdminActionRequest request,
@@ -85,10 +85,8 @@ public class AdminController {
                 break;
 
             case "BAN_USER":
-                // Now uses displayName instead of email
                 boolean banned = userService.banUserByUsername(request.getTargetUsername());
                 if (banned) {
-                    // Get the user's email to notify via WebSocket
                     String bannedEmail = userService.getEmailByUsername(request.getTargetUsername());
 
                     ChatMessage banMsg = new ChatMessage();
@@ -130,7 +128,7 @@ public class AdminController {
 
         return ResponseEntity.ok(response);
     }
-
+    // all  user info
     @GetMapping("/users")
     public ResponseEntity<List<User>> getAllUsers(
             @RequestHeader("X-Admin-Username") String username,

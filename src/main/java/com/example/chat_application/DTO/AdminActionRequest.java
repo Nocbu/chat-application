@@ -7,7 +7,6 @@ public class AdminActionRequest {
     private String targetUsername;   // admin uses display name, NOT email
     private String reason;
 
-    // Getters and Setters
     public String getAction() { return action; }
     public void setAction(String action) { this.action = action; }
 

@@ -4,15 +4,6 @@ import java.util.List;
 
 public class PasswordValidator {
 
-    /**
-     * Validates password strength.
-     * Requirements:
-     * - At least 8 characters
-     * - At least 1 uppercase letter
-     * - At least 1 lowercase letter
-     * - At least 1 digit
-     * - At least 1 special character (!@#$%^&*()_+-=[]{}|;':\",./<>?)
-     */
     public static List<String> validate(String password) {
         List<String> errors = new ArrayList<>();
 

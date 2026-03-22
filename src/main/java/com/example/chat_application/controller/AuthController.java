@@ -19,10 +19,7 @@ public class AuthController {
     @Autowired
     private UserService userService;
 
-    /**
-     * POST /api/auth/register
-     * Register new user with email/password
-     */
+    //for regitser and validation
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
         AuthResponse response = userService.register(request);
@@ -32,15 +29,12 @@ public class AuthController {
         return ResponseEntity.badRequest().body(response);
     }
 
-    /**
-     * POST /api/auth/login
-     * Login with email/password (user) or username/password (admin)
-     */
+    //login and check credentials
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request, HttpSession session) {
         AuthResponse response = userService.login(request);
         if (response.isSuccess()) {
-            // Store user info in session
+            //using session for storing
             session.setAttribute("userEmail", response.getEmail());
             session.setAttribute("displayName", response.getDisplayName());
             session.setAttribute("role", response.getRole());
@@ -50,10 +44,7 @@ public class AuthController {
         return ResponseEntity.badRequest().body(response);
     }
 
-    /**
-     * GET /api/auth/oauth2/success
-     * Called after successful Google OAuth2 login
-     */
+    //oath success
     @GetMapping("/oauth2/success")
     public String oauthSuccess(@AuthenticationPrincipal OAuth2User oAuth2User, HttpSession session) {
 
@@ -68,14 +59,14 @@ public class AuthController {
         String googleId = oAuth2User.getAttribute("sub");
         String picture = oAuth2User.getAttribute("picture");
 
-        // ✅ Create/update user ONCE and get saved user back
+        //create new if new
         User saved = userService.processGoogleUser(email, name, googleId, picture);
 
         session.setAttribute("userEmail", email);
         session.setAttribute("displayName", name);
         session.setAttribute("role", "USER");
 
-        // If username not set, go to onboarding page
+        // agar username na ho toh
         if (saved.getUsername() == null || saved.getUsername().isBlank()) {
             return "<html><body><script>"
                     + "localStorage.setItem('userEmail', '" + email + "');"
@@ -86,7 +77,7 @@ public class AuthController {
                     + "</script></body></html>";
         }
 
-        // Otherwise go to chat
+        // else chat
         return "<html><body><script>"
                 + "localStorage.setItem('userEmail', '" + email + "');"
                 + "localStorage.setItem('displayName', '" + name + "');"
@@ -97,19 +88,14 @@ public class AuthController {
                 + "</script></body></html>";
     }
 
-    /**
-     * POST /api/auth/logout
-     */
+    //delte session after logout
     @PostMapping("/logout")
     public ResponseEntity<AuthResponse> logout(HttpSession session) {
         session.invalidate();
         return ResponseEntity.ok(new AuthResponse(true, "Logged out successfully"));
     }
 
-    /**
-     * GET /api/auth/session
-     * Check current session
-     */
+    //session check
     @GetMapping("/session")
     public ResponseEntity<AuthResponse> checkSession(HttpSession session) {
         String email = (String) session.getAttribute("userEmail");

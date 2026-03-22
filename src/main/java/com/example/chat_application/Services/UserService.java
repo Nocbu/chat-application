@@ -31,28 +31,22 @@ public class UserService {
     @Value("${admin.password}")
     private String adminPassword;
 
-    /**
-     * Register a new user with email/password
-     */
+    //register
     public AuthResponse register(RegisterRequest request) {
 
-        // ✅ 1) Normalize email ONCE here (this is the line you asked about)
+
         String normalizedEmail = request.getEmail() == null
                 ? null
                 : request.getEmail().trim().toLowerCase();
 
-        // ✅ 2) Use normalizedEmail for checks
         if (normalizedEmail == null || normalizedEmail.isBlank()) {
             return new AuthResponse(false, "Email is required");
         }
 
-        // If you added @Pattern in RegisterRequest, this is extra safety,
-        // but it's still fine to keep:
         if (!normalizedEmail.endsWith("@gmail.com")) {
             return new AuthResponse(false, "Only Gmail addresses are allowed (example@gmail.com)");
         }
 
-        // Check if email already exists
         if (userRepository.existsByEmail(normalizedEmail)) {
             return new AuthResponse(false, "An account with this email already exists. Please login instead.");
         }
@@ -66,13 +60,13 @@ public class UserService {
             return new AuthResponse(false, "Username already taken. Please choose another one.");
         }
 
-        // Validate password strength
+        // pass validate
         List<String> passwordErrors = PasswordValidator.validate(request.getPassword());
         if (!passwordErrors.isEmpty()) {
             return new AuthResponse(false, String.join(". ", passwordErrors));
         }
 
-        // Create user
+        //create user
         User user = new User();
         user.setEmail(normalizedEmail); // ✅ 3) Save normalized email (important!)
         user.setPassword(passwordEncoder.encode(request.getPassword()));
@@ -92,12 +86,9 @@ public class UserService {
         return response;
     }
 
-    /**
-     * Login with email/password (for both User and Admin)
-     */
+    //login email pass admin and user
     public AuthResponse login(LoginRequest request) {
 
-        // Admin login (username/password from application.properties)
         if (request.getEmail().equals(adminUsername) && request.getPassword().equals(adminPassword)) {
             AuthResponse response = new AuthResponse(true, "Admin login successful!");
             response.setDisplayName("Admin");
@@ -106,7 +97,6 @@ public class UserService {
             return response;
         }
 
-        // ✅ Normalize login email too (so Test@GMAIL.com works)
         String normalizedEmail = request.getEmail() == null
                 ? null
                 : request.getEmail().trim().toLowerCase();
@@ -123,22 +113,18 @@ public class UserService {
 
         User user = optionalUser.get();
 
-        // Google accounts should login via Google
         if ("GOOGLE".equals(user.getAuthProvider())) {
             return new AuthResponse(false, "This account uses Google Sign-In. Please login with Google.");
         }
 
-        // Banned check
         if (!user.isEnabled()) {
             return new AuthResponse(false, "Your account has been banned. Contact admin.");
         }
 
-        // Verify password
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             return new AuthResponse(false, "Incorrect password.");
         }
 
-        // Update last login
         user.setLastLogin(LocalDateTime.now());
         userRepository.save(user);
 
@@ -149,9 +135,7 @@ public class UserService {
         return response;
     }
 
-    /**
-     * Find or create user from Google OAuth
-     */
+    //google loging
     public User processGoogleUser(String email, String name, String googleId, String picture) {
 
         String normalizedEmail = email == null ? null : email.trim().toLowerCase();
@@ -186,12 +170,12 @@ public class UserService {
         if (normalizedEmail == null || normalizedEmail.isBlank()) return false;
         if (normalizedUsername == null || normalizedUsername.isBlank()) return false;
 
-        // validate username format
+        //usernmae
         if (!normalizedUsername.matches("^[a-z0-9._]{3,20}$")) {
             throw new IllegalArgumentException("Invalid username format");
         }
 
-        // unique check
+        //unique
         if (userRepository.existsByUsername(normalizedUsername)) {
             throw new IllegalArgumentException("Username already taken");
         }
@@ -204,8 +188,7 @@ public class UserService {
         return true;
     }
 
-    // ===== BAN/UNBAN BY EMAIL =====
-
+    //ban unban
     public boolean banUser(String email) {
         Optional<User> user = userRepository.findByEmail(email);
         if (user.isPresent()) {
@@ -226,7 +209,7 @@ public class UserService {
         return false;
     }
 
-    // ===== BAN/UNBAN BY DISPLAY NAME (USERNAME) =====
+    //not required now
 
     public boolean banUserByDisplayName(String displayName) {
         Optional<User> user = userRepository.findByDisplayName(displayName);

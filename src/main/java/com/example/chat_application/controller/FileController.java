@@ -22,10 +22,7 @@ public class FileController {
     @Autowired
     private FileStorageService fileStorageService;
 
-    /**
-     * POST /api/files/upload
-     * Upload a file (image, pdf, etc.)
-     */
+    //uploads
     @PostMapping("/upload")
     public ResponseEntity<Map<String, Object>> uploadFile(
             @RequestParam("file") MultipartFile file,
@@ -40,7 +37,7 @@ public class FileController {
             return ResponseEntity.badRequest().body(response);
         }
 
-        // Check file size (50MB max)
+        //file szie 50mb
         if (file.getSize() > 50 * 1024 * 1024) {
             response.put("success", false);
             response.put("message", "File too large. Max 50MB.");
@@ -65,10 +62,7 @@ public class FileController {
         }
     }
 
-    /**
-     * GET /api/files/download/{fileId}
-     * Download a file
-     */
+    //file download
     @GetMapping("/download/{fileId}")
     public ResponseEntity<Resource> downloadFile(@PathVariable String fileId) {
         Resource resource = fileStorageService.loadFileAsResource(fileId);
@@ -83,9 +77,7 @@ public class FileController {
                 .body(resource);
     }
 
-    /**
-     * GET /api/files/info/{fileId}
-     */
+    //file info
     @GetMapping("/info/{fileId}")
     public ResponseEntity<FileAttachment> getFileInfo(@PathVariable String fileId) {
         return fileStorageService.getFileInfo(fileId)

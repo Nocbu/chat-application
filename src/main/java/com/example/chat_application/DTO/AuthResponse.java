@@ -14,8 +14,6 @@ public class AuthResponse {
         this.success = success;
         this.message = message;
     }
-
-    // Getters and Setters
     public boolean isSuccess() { return success; }
     public void setSuccess(boolean success) { this.success = success; }
 

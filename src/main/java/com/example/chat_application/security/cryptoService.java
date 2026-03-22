@@ -28,7 +28,7 @@ public class cryptoService {
         this.key = new SecretKeySpec(keyBytes, "AES");
     }
 
-    /** Returns base64(iv) + ":" + base64(ciphertext+tag) */
+    //for iv and cipher tag
     public String encryptToString(String plainText) {
         if (plainText == null) return null;
         try {
@@ -50,7 +50,7 @@ public class cryptoService {
         try {
             String[] parts = encrypted.split(":", 2);
             if (parts.length != 2) {
-                // If it's old/plain data, return as-is
+                //return old one
                 return encrypted;
             }
 
