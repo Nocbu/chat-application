@@ -856,6 +856,9 @@ body {
     padding: 10px 14px;
     border-bottom: 1px solid #eee;
     background: #fff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .dm-title {
@@ -961,4 +964,154 @@ body {
 /* Responsive: sidebar collapses */
 @media (max-width: 760px) {
     .dm-sidebar { width: 200px; }
+}
+
+/* ===== PRESENCE DOT ===== */
+.presence-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.presence-online {
+    background: #22c55e;
+    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.25);
+}
+
+.presence-offline {
+    background: #9ca3af;
+}
+
+/* Presence dot in DM header */
+.dm-header .presence-dot {
+    width: 12px;
+    height: 12px;
+    margin-left: 8px;
+    align-self: center;
+}
+
+/* ===== READ RECEIPT TICK ===== */
+.read-receipt {
+    font-size: 11px;
+    color: #9ca3af;
+    margin-left: 4px;
+    user-select: none;
+    vertical-align: middle;
+}
+
+.read-receipt.read {
+    color: #3b82f6;
+}
+
+/* ===== REPLY QUOTE (in message bubble) ===== */
+.reply-quote {
+    display: flex;
+    flex-direction: column;
+    border-left: 3px solid #6366f1;
+    background: rgba(99, 102, 241, 0.08);
+    border-radius: 0 6px 6px 0;
+    padding: 4px 8px;
+    margin-bottom: 4px;
+    max-width: 100%;
+}
+
+.reply-quote-sender {
+    font-size: 12px;
+    font-weight: 700;
+    color: #6366f1;
+    margin-bottom: 1px;
+}
+
+.reply-quote-text {
+    font-size: 12px;
+    color: #555;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ===== REPLY PREVIEW STRIP (in input area) ===== */
+.reply-preview {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f0f0ff;
+    border-left: 3px solid #6366f1;
+    border-radius: 4px;
+    padding: 6px 10px;
+    margin-bottom: 6px;
+    font-size: 13px;
+}
+
+.reply-preview-bar {
+    width: 3px;
+    border-radius: 2px;
+    background: #6366f1;
+    align-self: stretch;
+}
+
+.reply-preview-body {
+    flex: 1;
+    overflow: hidden;
+}
+
+.reply-preview-sender {
+    font-weight: 700;
+    color: #6366f1;
+    margin-right: 6px;
+}
+
+.reply-preview-text {
+    color: #555;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.reply-preview-cancel {
+    background: none;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 4px;
+    border-radius: 4px;
+}
+
+.reply-preview-cancel:hover {
+    background: #e5e5e5;
+    color: #333;
+}
+
+/* ===== REPLY BUTTON (hover on message) ===== */
+.msg-reply-btn {
+    position: absolute;
+    top: 6px;
+    right: 35px;
+    background: rgba(0, 0, 0, 0.08);
+    color: #444;
+    border: none;
+    border-radius: 8px;
+    padding: 2px 6px;
+    cursor: pointer;
+    font-size: 13px;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+#messageArea li:hover .msg-reply-btn,
+#dmMessageArea li:hover .msg-reply-btn {
+    opacity: 1;
+}
+
+/* ===== HIGHLIGHT FLASH (for scroll-to-original) ===== */
+@keyframes highlightFlash {
+    0%   { background: rgba(99, 102, 241, 0.25); }
+    100% { background: transparent; }
+}
+
+.highlight-flash {
+    animation: highlightFlash 1.5s ease;
 }

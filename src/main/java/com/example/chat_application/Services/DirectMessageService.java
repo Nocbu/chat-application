@@ -8,6 +8,7 @@ import com.example.chat_application.security.cryptoService;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class DirectMessageService {
@@ -74,6 +75,34 @@ public class DirectMessageService {
         }
 
         return messages;
+    }
+
+    /**
+     * Mark all messages in the conversation (sent by the other party) as read by viewerUsername.
+     * Returns the list of message IDs that were newly marked as read.
+     */
+    public List<String> markConversationAsRead(String conversationId, String viewerUsername) {
+        conversationService.requireMember(conversationId, viewerUsername);
+
+        String viewer = viewerUsername.trim().toLowerCase();
+        List<ChatMessage> messages = chatMessageRepository
+                .findByScopeAndConversationIdOrderByTimestampAsc("DIRECT", conversationId);
+
+        List<ChatMessage> toUpdate = messages.stream()
+                .filter(m -> !m.isDeletedForEveryone())
+                .filter(m -> m.getSenderUsername() != null && !m.getSenderUsername().equalsIgnoreCase(viewer))
+                .filter(m -> m.getReadBy() == null || !m.getReadBy().contains(viewer))
+                .collect(Collectors.toList());
+
+        for (ChatMessage m : toUpdate) {
+            if (m.getReadBy() == null) {
+                m.setReadBy(new java.util.HashSet<>());
+            }
+            m.getReadBy().add(viewer);
+            chatMessageRepository.save(m);
+        }
+
+        return toUpdate.stream().map(ChatMessage::getId).collect(Collectors.toList());
     }
 
     public ChatMessage deleteForMe(String messageId, String username) {

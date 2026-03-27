@@ -35,6 +35,27 @@ public class DirectMessageController {
         return ResponseEntity.ok(msgs);
     }
 
+    // REST: mark conversation as read
+    @PostMapping("/{conversationId}/read")
+    public ResponseEntity<?> markAsRead(@PathVariable String conversationId, HttpSession session) {
+        String username = (String) session.getAttribute("username");
+        if (username == null) return ResponseEntity.status(401).body(Map.of("success", false, "message", "Not logged in"));
+
+        List<String> readMessageIds = directMessageService.markConversationAsRead(conversationId, username);
+
+        if (!readMessageIds.isEmpty()) {
+            // Notify the other user's client so they can upgrade ✓ to ✓✓
+            messagingTemplate.convertAndSend("/topic/direct/" + conversationId, Map.of(
+                    "type", "UPDATE",
+                    "action", "READ_RECEIPT",
+                    "readerUsername", username,
+                    "messageIds", readMessageIds
+            ));
+        }
+
+        return ResponseEntity.ok(Map.of("success", true));
+    }
+
     // REST: delete for me
     @DeleteMapping("/{messageId}/me")
     public ResponseEntity<?> deleteForMe(@PathVariable String messageId, HttpSession session) {

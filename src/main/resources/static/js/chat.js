@@ -34,6 +34,11 @@ const filePreview = document.getElementById('file-preview');
 const filePreviewName = document.getElementById('file-preview-name');
 const filePreviewCancel = document.getElementById('file-preview-cancel');
 const adminPanel = document.getElementById('admin-panel');
+const replyPreviewEl = document.getElementById('reply-preview');
+const replyPreviewSenderEl = document.getElementById('replyPreviewSender');
+const replyPreviewTextEl = document.getElementById('replyPreviewText');
+const replyPreviewCancelBtn = document.getElementById('replyPreviewCancel');
+const dmPresenceDot = document.getElementById('dmPresenceDot');
 
 let stompClient = null;
 let selectedFile = null;
@@ -43,6 +48,12 @@ let mode = 'GROUP'; // GROUP | DIRECT
 let activeConversationId = null;
 let activeDmUsername = null;
 let dmSubscription = null;
+
+// ===== PRESENCE STATE =====
+const onlineUsers = new Set(); // usernames of currently online users
+
+// ===== REPLY STATE =====
+let pendingReply = null; // { messageId, content, sender }
 
 // Avatar colors
 const colors = [
@@ -66,6 +77,10 @@ function init() {
     loadChatHistory();
     connect();
     setupDmSearch();
+    loadInitialPresence();
+
+    // Reply cancel button
+    replyPreviewCancelBtn.addEventListener('click', clearReply);
 }
 
 // ===== MODE SWITCH =====
@@ -110,10 +125,14 @@ function onConnected() {
     // GROUP subscription
     stompClient.subscribe('/topic/public', onGroupMessageReceived);
 
+    // PRESENCE subscription
+    stompClient.subscribe('/topic/presence', onPresenceReceived);
+
     // Send join message (also stores username in websocket session attributes on backend)
     stompClient.send('/app/chat.addUser', {}, JSON.stringify({
         sender: displayName,
         senderEmail: userEmail,
+        senderUsername: username,
         type: 'JOIN'
     }));
 
@@ -135,6 +154,41 @@ async function loadChatHistory() {
     } catch (error) {
         console.error('Failed to load history:', error);
     }
+}
+
+// ===== INITIAL PRESENCE LOAD =====
+async function loadInitialPresence() {
+    try {
+        const res = await fetch('/api/users/online');
+        const users = await res.json();
+        if (Array.isArray(users)) {
+            users.forEach(u => onlineUsers.add(u.toLowerCase()));
+        }
+        updateDmPresenceDot();
+    } catch (e) {
+        console.error('Failed to load presence:', e);
+    }
+}
+
+// ===== PRESENCE HANDLER =====
+function onPresenceReceived(payload) {
+    const data = JSON.parse(payload.body);
+    if (!data || !data.username) return;
+
+    const u = data.username.toLowerCase();
+    if (data.status === 'ONLINE') {
+        onlineUsers.add(u);
+    } else {
+        onlineUsers.delete(u);
+    }
+    updateDmPresenceDot();
+}
+
+function updateDmPresenceDot() {
+    if (!dmPresenceDot || !activeDmUsername) return;
+    const isOnline = onlineUsers.has(activeDmUsername.toLowerCase());
+    dmPresenceDot.className = 'presence-dot ' + (isOnline ? 'presence-online' : 'presence-offline');
+    dmPresenceDot.title = isOnline ? 'Online' : 'Offline';
 }
 
 // ===== DM SEARCH =====
@@ -175,10 +229,14 @@ async function dmSearchUsers(q) {
         users.forEach(u => {
             const row = document.createElement('div');
             row.className = 'dm-search-item';
+            const isOnline = onlineUsers.has((u.username || '').toLowerCase());
             row.innerHTML = `
-                <div>
-                    <div class="u">@${escapeHtml(u.username || '')}</div>
-                    <div class="d">${escapeHtml(u.displayName || '')}</div>
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <span class="presence-dot ${isOnline ? 'presence-online' : 'presence-offline'}"></span>
+                    <div>
+                        <div class="u">@${escapeHtml(u.username || '')}</div>
+                        <div class="d">${escapeHtml(u.displayName || '')}</div>
+                    </div>
                 </div>
                 <div class="d">Open</div>
             `;
@@ -210,7 +268,7 @@ async function openDirectChat(targetUsername, targetDisplayName) {
         }
 
         activeConversationId = data.conversationId;
-        activeDmUsername = targetUsername;
+        activeDmUsername = targetUsername.trim().toLowerCase();
 
         dmWithEl.textContent = `${targetDisplayName ? targetDisplayName + ' ' : ''}(@${targetUsername})`;
 
@@ -224,8 +282,17 @@ async function openDirectChat(targetUsername, targetDisplayName) {
         }
         dmSubscription = stompClient.subscribe(`/topic/direct/${activeConversationId}`, onDirectMessageReceived);
 
-        // load history
+        // load history (and mark as read)
         await loadDirectHistory(activeConversationId);
+
+        // mark messages as read
+        markConversationAsRead(activeConversationId);
+
+        // update presence dot
+        updateDmPresenceDot();
+
+        // clear any pending reply when switching conversations
+        clearReply();
 
         // hide results dropdown
         dmSearchResults.classList.add('hidden');
@@ -253,6 +320,14 @@ async function loadDirectHistory(conversationId) {
     }
 }
 
+async function markConversationAsRead(conversationId) {
+    try {
+        await fetch(`/api/messages/direct/${conversationId}/read`, { method: 'POST' });
+    } catch (e) {
+        console.error('markAsRead failed', e);
+    }
+}
+
 // ===== SEND MESSAGE (GROUP OR DIRECT) =====
 messageForm.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -266,25 +341,39 @@ messageForm.addEventListener('submit', (e) => {
     if (!content || !stompClient) return;
 
     if (mode === 'GROUP') {
-        stompClient.send('/app/chat.sendMessage', {}, JSON.stringify({
+        const payload = {
             sender: displayName,
             senderEmail: userEmail,
+            senderUsername: username,
             content,
             type: 'CHAT'
-        }));
+        };
+        if (pendingReply) {
+            payload.replyToMessageId = pendingReply.messageId;
+            payload.replyToContent = pendingReply.content;
+            payload.replyToSender = pendingReply.sender;
+        }
+        stompClient.send('/app/chat.sendMessage', {}, JSON.stringify(payload));
     } else {
         if (!activeConversationId) return alert('Open a direct chat first.');
-        stompClient.send('/app/direct.sendMessage', {}, JSON.stringify({
+        const payload = {
             conversationId: activeConversationId,
             sender: displayName,
             senderEmail: userEmail,
             senderUsername: username,
             content,
             type: 'CHAT'
-        }));
+        };
+        if (pendingReply) {
+            payload.replyToMessageId = pendingReply.messageId;
+            payload.replyToContent = pendingReply.content;
+            payload.replyToSender = pendingReply.sender;
+        }
+        stompClient.send('/app/direct.sendMessage', {}, JSON.stringify(payload));
     }
 
     messageInput.value = '';
+    clearReply();
 });
 
 // ===== FILE HANDLING =====
@@ -328,6 +417,7 @@ async function uploadAndSendFile() {
         const payload = {
             sender: displayName,
             senderEmail: userEmail,
+            senderUsername: username,
             content: messageInput.value.trim() || '',
             type: 'FILE',
             fileId: data.fileId,
@@ -335,6 +425,11 @@ async function uploadAndSendFile() {
             fileType: data.fileType,
             fileSize: data.fileSize
         };
+        if (pendingReply) {
+            payload.replyToMessageId = pendingReply.messageId;
+            payload.replyToContent = pendingReply.content;
+            payload.replyToSender = pendingReply.sender;
+        }
 
         if (mode === 'GROUP') {
             stompClient.send('/app/chat.sendFile', {}, JSON.stringify(payload));
@@ -342,8 +437,7 @@ async function uploadAndSendFile() {
             if (!activeConversationId) return alert('Open a direct chat first.');
             stompClient.send('/app/direct.sendFile', {}, JSON.stringify({
                 ...payload,
-                conversationId: activeConversationId,
-                senderUsername: username
+                conversationId: activeConversationId
             }));
         }
 
@@ -352,6 +446,7 @@ async function uploadAndSendFile() {
         fileInput.value = '';
         filePreview.classList.add('hidden');
         messageInput.value = '';
+        clearReply();
 
     } catch (error) {
         alert('Upload error: ' + error.message);
@@ -380,7 +475,7 @@ function onGroupMessageReceived(payload) {
 function onDirectMessageReceived(payload) {
     const body = JSON.parse(payload.body);
 
-    // UPDATE payload (delete events)
+    // UPDATE payload (delete events / read receipts)
     if (body && body.type === 'UPDATE') {
         applyDmUpdate(body);
         return;
@@ -389,10 +484,33 @@ function onDirectMessageReceived(payload) {
     // Normal ChatMessage
     renderDirectMessage(body);
     dmMessageArea.scrollTop = dmMessageArea.scrollHeight;
+
+    // If a new message arrives and this DM panel is open and active, mark as read
+    if (activeConversationId && body.senderUsername && body.senderUsername.toLowerCase() !== username) {
+        markConversationAsRead(activeConversationId);
+    }
 }
 
 function applyDmUpdate(update) {
     const messageId = update.messageId;
+
+    if (update.action === 'READ_RECEIPT') {
+        // Mark all messages from me as read (upgrade ✓ to ✓✓)
+        const readerUsername = (update.readerUsername || '').toLowerCase();
+        const messageIds = update.messageIds || [];
+        messageIds.forEach(id => {
+            const el = dmMessageArea.querySelector(`[data-message-id="${id}"]`);
+            if (!el) return;
+            const tick = el.querySelector('.read-receipt');
+            if (tick) {
+                tick.textContent = '✓✓';
+                tick.classList.add('read');
+                tick.title = `Read by ${readerUsername}`;
+            }
+        });
+        return;
+    }
+
     if (!messageId) return;
 
     const el = dmMessageArea.querySelector(`[data-message-id="${messageId}"]`);
@@ -411,6 +529,10 @@ function applyDmUpdate(update) {
         if (fileAttachment) fileAttachment.remove();
         const img = el.querySelector('.chat-image-preview');
         if (img) img.remove();
+
+        // remove receipt tick if present
+        const tick = el.querySelector('.read-receipt');
+        if (tick) tick.remove();
 
     } else if (update.action === 'DELETED_FOR_ME') {
         // Only remove if the update is for me
@@ -464,6 +586,37 @@ function renderMessageInto(targetUl, message, opts) {
     usernameEl.classList.add('username');
     usernameEl.textContent = message.sender;
     li.appendChild(usernameEl);
+
+    // Reply quote block (shown if this message is a reply)
+    if (message.replyToMessageId && message.replyToSender) {
+        const quoteEl = document.createElement('div');
+        quoteEl.classList.add('reply-quote');
+
+        const quoteSender = document.createElement('span');
+        quoteSender.classList.add('reply-quote-sender');
+        quoteSender.textContent = message.replyToSender;
+        quoteEl.appendChild(quoteSender);
+
+        const quoteText = document.createElement('span');
+        quoteText.classList.add('reply-quote-text');
+        quoteText.textContent = message.replyToContent
+            ? truncateText(message.replyToContent, 80)
+            : '📎 File';
+        quoteEl.appendChild(quoteText);
+
+        // Clicking the quote scrolls to the original message
+        quoteEl.style.cursor = 'pointer';
+        quoteEl.addEventListener('click', () => {
+            const orig = targetUl.querySelector(`[data-message-id="${message.replyToMessageId}"]`);
+            if (orig) {
+                orig.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                orig.classList.add('highlight-flash');
+                setTimeout(() => orig.classList.remove('highlight-flash'), 1500);
+            }
+        });
+
+        li.appendChild(quoteEl);
+    }
 
     // Content
     const contentEl = document.createElement('span');
@@ -527,6 +680,45 @@ function renderMessageInto(targetUl, message, opts) {
     const timeEl = createTimestamp(message.timestamp);
     li.appendChild(timeEl);
 
+    // Read receipt tick (DM only, for my own messages)
+    if (opts.allowDmMenu && !deletedForEveryone) {
+        const mineByUsername = message.senderUsername && username && message.senderUsername.toLowerCase() === username;
+        const mineByEmail = message.senderEmail && message.senderEmail === userEmail;
+        if (mineByUsername || mineByEmail) {
+            const tick = document.createElement('span');
+            tick.classList.add('read-receipt');
+            const readByOther = message.readBy && Array.isArray(message.readBy)
+                ? message.readBy.some(u => u.toLowerCase() !== username)
+                : (message.readBy instanceof Set ? [...message.readBy].some(u => u.toLowerCase() !== username) : false);
+            if (readByOther) {
+                tick.textContent = '✓✓';
+                tick.classList.add('read');
+                tick.title = 'Read';
+            } else {
+                tick.textContent = '✓';
+                tick.title = 'Sent';
+            }
+            li.appendChild(tick);
+        }
+    }
+
+    // Reply button (shown on hover for non-deleted messages)
+    if (!deletedForEveryone && message.id) {
+        const replyBtn = document.createElement('button');
+        replyBtn.className = 'msg-reply-btn';
+        replyBtn.textContent = '↩';
+        replyBtn.title = 'Reply';
+        replyBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            setReply({
+                messageId: message.id,
+                content: message.content || (isFile ? '📎 File' : ''),
+                sender: message.sender || ''
+            });
+        });
+        li.appendChild(replyBtn);
+    }
+
     // Admin delete button (group only)
     if (opts.allowAdminDelete) {
         li.appendChild(createDeleteButton(message.id));
@@ -546,6 +738,22 @@ function renderMessageInto(targetUl, message, opts) {
     }
 
     targetUl.appendChild(li);
+}
+
+// ===== REPLY HELPERS =====
+function setReply(reply) {
+    pendingReply = reply;
+    replyPreviewSenderEl.textContent = reply.sender;
+    replyPreviewTextEl.textContent = truncateText(reply.content, 80);
+    replyPreviewEl.classList.remove('hidden');
+    messageInput.focus();
+}
+
+function clearReply() {
+    pendingReply = null;
+    replyPreviewEl.classList.add('hidden');
+    replyPreviewSenderEl.textContent = '';
+    replyPreviewTextEl.textContent = '';
 }
 
 // ===== DM MENU =====
@@ -754,6 +962,11 @@ async function adminDeleteMessage(messageId) {
 }
 
 // ===== HELPERS =====
+function truncateText(text, maxLength) {
+    if (!text) return '';
+    return text.length > maxLength ? text.slice(0, maxLength) + '…' : text;
+}
+
 function createAvatar(name) {
     const avatar = document.createElement('span');
     avatar.classList.add('avatar');
