@@ -39,6 +39,14 @@ public class ChatMessage {
     private boolean deletedForEveryone = false;
     private Set<String> deletedFor = new HashSet<>();
 
+    // Read receipts (DIRECT messages)
+    private Set<String> readBy = new HashSet<>();
+
+    // Reply-to metadata
+    private String replyToMessageId;
+    private String replyToContent;
+    private String replyToSender;
+
     private LocalDateTime timestamp;
 
     public ChatMessage() {
@@ -97,6 +105,20 @@ public class ChatMessage {
     public void setDeletedFor(Set<String> deletedFor) {
         this.deletedFor = (deletedFor == null) ? new HashSet<>() : deletedFor;
     }
+
+    public Set<String> getReadBy() { return readBy; }
+    public void setReadBy(Set<String> readBy) {
+        this.readBy = (readBy == null) ? new HashSet<>() : readBy;
+    }
+
+    public String getReplyToMessageId() { return replyToMessageId; }
+    public void setReplyToMessageId(String replyToMessageId) { this.replyToMessageId = replyToMessageId; }
+
+    public String getReplyToContent() { return replyToContent; }
+    public void setReplyToContent(String replyToContent) { this.replyToContent = replyToContent; }
+
+    public String getReplyToSender() { return replyToSender; }
+    public void setReplyToSender(String replyToSender) { this.replyToSender = replyToSender; }
 
     public LocalDateTime getTimestamp() { return timestamp; }
     public void setTimestamp(LocalDateTime timestamp) { this.timestamp = timestamp; }
