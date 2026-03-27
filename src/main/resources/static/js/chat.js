@@ -367,6 +367,11 @@ function onGroupMessageReceived(payload) {
         return;
     }
 
+    // Guard: ignore any message that is explicitly scoped to DIRECT
+    if (message.scope === 'DIRECT') {
+        return;
+    }
+
     renderGroupMessage(message);
     messageArea.scrollTop = messageArea.scrollHeight;
 }

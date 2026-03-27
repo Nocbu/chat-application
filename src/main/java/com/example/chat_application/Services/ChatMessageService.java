@@ -27,7 +27,9 @@ public class ChatMessageService {
     }
 
     public List<ChatMessage> getRecentMessages() {
-        List<ChatMessage> messages = messageRepository.findTop100ByOrderByTimestampDesc();
+        // Only fetch PUBLIC-scoped messages; null scope is included for backward
+        // compatibility with messages saved before the scope field was introduced
+        List<ChatMessage> messages = messageRepository.findTop100ByScopeIsNullOrScopeOrderByTimestampDesc("PUBLIC");
         Collections.reverse(messages);
 
         //decrypt
