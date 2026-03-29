@@ -49,7 +49,8 @@ let selectedFile = null;
 let mode = 'GROUP'; // GROUP | DIRECT
 let activeConversationId = null;
 let activeDmUsername = null;
-let dmSubscription = null;
+// Persistent subscriptions to all known conversations (never unsubscribed during session)
+const dmConvSubscriptions = {};
 
 // ===== UNREAD STATE =====
 // Map of conversationId -> { count, otherUsername, otherDisplayName, lastPreview, lastTimestamp }
@@ -138,6 +139,11 @@ function onConnected() {
     // PRESENCE subscription
     stompClient.subscribe('/topic/presence', onPresenceReceived);
 
+    // Personal notification topic for live DM sidebar updates
+    if (username) {
+        stompClient.subscribe(`/topic/user/${username}`, onPersonalNotificationReceived);
+    }
+
     // Send join message (also stores username in websocket session attributes on backend)
     stompClient.send('/app/chat.addUser', {}, JSON.stringify({
         sender: displayName,
@@ -147,6 +153,9 @@ function onConnected() {
     }));
 
     connectingElement.classList.add('hidden');
+
+    // Subscribe to all already-loaded conversations (in case loadConversationSummaries ran first)
+    subscribeToAllConversations();
 }
 
 function onError() {
@@ -292,6 +301,8 @@ async function loadConversationSummaries() {
 
         renderConversationList(summaries);
         updateTotalUnreadBadge();
+        // Subscribe to all loaded conversations so live updates are received
+        subscribeToAllConversations();
     } catch (e) {
         console.error('Failed to load conversation summaries', e);
     }
@@ -402,6 +413,111 @@ function updateTotalUnreadBadge() {
     }
 }
 
+// ===== CONVERSATION SUBSCRIPTIONS =====
+function subscribeToConversation(conversationId) {
+    if (!conversationId || dmConvSubscriptions[conversationId]) return;
+    if (!stompClient || !stompClient.connected) return;
+    dmConvSubscriptions[conversationId] = stompClient.subscribe(
+        `/topic/direct/${conversationId}`,
+        onDirectMessageReceived
+    );
+}
+
+function subscribeToAllConversations() {
+    Object.keys(dmUnreadCounts).forEach(convId => subscribeToConversation(convId));
+}
+
+// ===== PERSONAL NOTIFICATION HANDLER (CONV_UPDATE) =====
+function onPersonalNotificationReceived(payload) {
+    const data = JSON.parse(payload.body);
+    if (!data || data.type !== 'CONV_UPDATE') return;
+
+    const convId = data.conversationId;
+    if (!convId) return;
+
+    const senderUsername = (data.senderUsername || '').toLowerCase();
+    const otherUsername = data.otherUsername || '';
+    const otherDisplayName = data.otherDisplayName || otherUsername;
+    const preview = data.lastPreview || '';
+    const lastTimestamp = data.lastTimestamp || null;
+    const isFromMe = senderUsername === username;
+
+    // Ensure we're subscribed to this conversation for UPDATE events (deletes, receipts)
+    subscribeToConversation(convId);
+
+    if (!dmUnreadCounts[convId]) {
+        // Brand-new conversation not previously known — add it to the sidebar
+        dmUnreadCounts[convId] = {
+            count: (!isFromMe && convId !== activeConversationId) ? 1 : 0,
+            otherUsername: otherUsername,
+            otherDisplayName: otherDisplayName,
+            lastPreview: preview,
+            lastTimestamp: lastTimestamp
+        };
+        addNewConversationItem(convId, otherUsername, otherDisplayName, preview,
+            dmUnreadCounts[convId].count);
+    } else {
+        // Update existing entry
+        const stored = dmUnreadCounts[convId];
+        if (otherUsername) stored.otherUsername = stored.otherUsername || otherUsername;
+        if (otherDisplayName) stored.otherDisplayName = stored.otherDisplayName || otherDisplayName;
+        stored.lastPreview = preview;
+        stored.lastTimestamp = lastTimestamp;
+
+        if (!isFromMe && convId !== activeConversationId) {
+            stored.count = (stored.count || 0) + 1;
+        }
+
+        const existsInDom = !!dmConversationList.querySelector(`[data-conv-id="${convId}"]`);
+        if (existsInDom) {
+            updateConversationListItem(convId, preview);
+            bringConversationToTop(convId);
+        } else {
+            // Entry is in state (e.g. stub from openDirectChat) but not yet rendered in DOM
+            addNewConversationItem(convId, stored.otherUsername, stored.otherDisplayName,
+                preview, stored.count);
+        }
+    }
+
+    updateTotalUnreadBadge();
+}
+
+function addNewConversationItem(convId, otherUsername, otherDisplayName, preview, unreadCount) {
+    // Remove stale entry if any
+    const existing = dmConversationList.querySelector(`[data-conv-id="${convId}"]`);
+    if (existing) existing.remove();
+
+    const item = document.createElement('div');
+    item.className = 'dm-conv-item';
+    item.setAttribute('data-conv-id', convId);
+
+    if (convId === activeConversationId) item.classList.add('active');
+
+    const isOnline = onlineUsers.has((otherUsername || '').toLowerCase());
+
+    item.innerHTML = `
+        <div class="dm-conv-avatar">${escapeHtml((otherDisplayName || otherUsername || '?')[0].toUpperCase())}</div>
+        <div class="dm-conv-info">
+            <div class="dm-conv-name">
+                <span class="presence-dot ${isOnline ? 'presence-online' : 'presence-offline'}" style="width:8px;height:8px;"></span>
+                ${escapeHtml(otherDisplayName || otherUsername || '')}
+                <span class="dm-conv-username">@${escapeHtml(otherUsername || '')}</span>
+            </div>
+            <div class="dm-conv-preview">${escapeHtml(preview || 'No messages yet')}</div>
+        </div>
+        ${unreadCount > 0 ? `<span class="dm-unread-badge">${unreadCount > 99 ? '99+' : unreadCount}</span>` : ''}
+    `;
+
+    item.addEventListener('click', () => openDirectChat(otherUsername, otherDisplayName));
+
+    // Insert at top of list (most recent)
+    if (dmConversationList.firstChild) {
+        dmConversationList.insertBefore(item, dmConversationList.firstChild);
+    } else {
+        dmConversationList.appendChild(item);
+    }
+}
+
 // ===== OPEN DM =====
 async function openDirectChat(targetUsername, targetDisplayName) {
     if (!targetUsername) return;
@@ -424,15 +540,23 @@ async function openDirectChat(targetUsername, targetDisplayName) {
 
         dmWithEl.textContent = `${targetDisplayName ? targetDisplayName + ' ' : ''}(@${targetUsername})`;
 
+        // Ensure the conversation is tracked in dmUnreadCounts so the display name is
+        // available when the CONV_UPDATE notification arrives from the personal topic.
+        if (!dmUnreadCounts[activeConversationId]) {
+            dmUnreadCounts[activeConversationId] = {
+                count: 0,
+                otherUsername: activeDmUsername,
+                otherDisplayName: targetDisplayName || activeDmUsername,
+                lastPreview: '',
+                lastTimestamp: null
+            };
+        }
+
         // reset UI
         dmMessageArea.innerHTML = '';
 
-        // subscribe
-        if (dmSubscription) {
-            dmSubscription.unsubscribe();
-            dmSubscription = null;
-        }
-        dmSubscription = stompClient.subscribe(`/topic/direct/${activeConversationId}`, onDirectMessageReceived);
+        // Subscribe to conversation (persistent — never unsubscribed during the session)
+        subscribeToConversation(activeConversationId);
 
         // load history (and mark as read)
         await loadDirectHistory(activeConversationId);
@@ -636,57 +760,18 @@ function onDirectMessageReceived(payload) {
         return;
     }
 
-    // Normal ChatMessage
+    // Only render messages that belong to the currently active conversation.
+    // Background conversations (subscribed at startup) must not bleed into the active chat area.
+    const convId = body.conversationId || activeConversationId;
+    if (convId !== activeConversationId) return;
+
     renderDirectMessage(body);
     dmMessageArea.scrollTop = dmMessageArea.scrollHeight;
 
-    // Determine the conversation id from the message
-    const convId = body.conversationId || activeConversationId;
-
-    // If this message is from someone else (not me)
+    // Mark as read when we receive a message from someone else in the active conversation
     const isFromMe = body.senderUsername && body.senderUsername.toLowerCase() === username;
-    if (!isFromMe && convId) {
-        if (convId === activeConversationId) {
-            // Active conversation: mark as read immediately
-            markConversationAsRead(activeConversationId);
-        } else {
-            // Non-active conversation: increment unread count
-            let preview = '';
-            if (body.type === 'FILE') {
-                preview = '📎 ' + (body.fileName || 'File');
-            } else {
-                preview = body.content ? (body.content.length > DM_PREVIEW_MAX_LENGTH ? body.content.substring(0, DM_PREVIEW_MAX_LENGTH) + '…' : body.content) : '';
-            }
-            // Ensure the conversation is tracked even if not yet in our list
-            if (!dmUnreadCounts[convId]) {
-                dmUnreadCounts[convId] = {
-                    count: 0,
-                    otherUsername: body.senderUsername || '',
-                    otherDisplayName: body.sender || body.senderUsername || '',
-                    lastPreview: preview,
-                    lastTimestamp: null
-                };
-                // Reload full list to get proper metadata for new unknown conversation
-                loadConversationSummaries();
-            } else {
-                incrementConversationUnread(convId, preview);
-            }
-        }
-    }
-
-    // Update the conversation list preview for the active conversation when I send
-    if (isFromMe && convId) {
-        let preview = '';
-        if (body.type === 'FILE') {
-            preview = '📎 ' + (body.fileName || 'File');
-        } else {
-            preview = body.content ? (body.content.length > DM_PREVIEW_MAX_LENGTH ? body.content.substring(0, DM_PREVIEW_MAX_LENGTH) + '…' : body.content) : '';
-        }
-        if (dmUnreadCounts[convId]) {
-            dmUnreadCounts[convId].lastPreview = preview;
-        }
-        updateConversationListItem(convId, preview);
-        bringConversationToTop(convId);
+    if (!isFromMe) {
+        markConversationAsRead(activeConversationId);
     }
 }
 
