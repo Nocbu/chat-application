@@ -16,26 +16,26 @@ public class ChatMessage {
     private MessageType type;
     private String content;
 
-    // Existing group-chat fields (keep)
+    //group-chat fields
     private String sender;       // display name (what you show in UI)
     private String senderEmail;
 
-    // New: username-based identity (needed for DMs + delete-for-everyone rules)
+    //for dm
     private String senderUsername;
 
-    // New: message scope (PUBLIC or DIRECT)
+    // scope message
     private String scope = "PUBLIC";
 
-    // New: conversation id for DIRECT messages
+    // conv. id for dm
     private String conversationId;
 
-    // Files
+    // files
     private String fileId;       // reference to FileAttachment if type=FILE
     private String fileName;
     private String fileType;
     private long fileSize;
 
-    // Deletion flags (DIRECT only, but safe to keep on all)
+    // delete flags
     private boolean deletedForEveryone = false;
     private Set<String> deletedFor = new HashSet<>();
 

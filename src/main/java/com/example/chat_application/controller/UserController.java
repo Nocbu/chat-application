@@ -37,7 +37,7 @@ public class UserController {
             String normalized = req.getUsername().trim().toLowerCase();
             userService.setUsernameForEmail(email, normalized);
 
-            // IMPORTANT: store username in session for DM endpoints
+            // store usern for dm endpoint
             session.setAttribute("username", normalized);
 
             resp.put("success", true);

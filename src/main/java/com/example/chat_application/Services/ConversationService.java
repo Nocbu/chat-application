@@ -37,11 +37,10 @@ public class ConversationService {
         String b = targetUsername.trim().toLowerCase();
         String pairKey = (a.compareTo(b) < 0) ? (a + ":" + b) : (b + ":" + a);
 
-        // Validate target user exists + enabled
+
         User target = userRepository.findByUsernameIgnoreCase(targetUsername)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + targetUsername));
 
-        // enabled is boolean => no null checks
         if (!target.isEnabled()) {
             throw new IllegalArgumentException("User is disabled/banned.");
         }

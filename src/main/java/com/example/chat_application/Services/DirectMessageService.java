@@ -77,10 +77,7 @@ public class DirectMessageService {
         return messages;
     }
 
-    /**
-     * Mark all messages in the conversation (sent by the other party) as read by viewerUsername.
-     * Returns the list of message IDs that were newly marked as read.
-     */
+    //mark read
     public List<String> markConversationAsRead(String conversationId, String viewerUsername) {
         conversationService.requireMember(conversationId, viewerUsername);
 
@@ -127,16 +124,16 @@ public class DirectMessageService {
         }
         conversationService.requireMember(m.getConversationId(), username);
 
-        // Only sender can delete for everyone
+        // only sender can delete for everyone
         if (m.getSenderUsername() == null || !m.getSenderUsername().equalsIgnoreCase(username)) {
             throw new SecurityException("Only sender can delete for everyone.");
         }
 
         m.setDeletedForEveryone(true);
 
-        // Optional: wipe content so even DB won't keep it (stronger privacy)
+
         m.setContent("");
-        // If you wipe content, decryption should not be attempted later.
+
 
         return chatMessageRepository.save(m);
     }

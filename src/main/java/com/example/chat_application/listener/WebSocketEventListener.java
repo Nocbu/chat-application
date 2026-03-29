@@ -43,11 +43,11 @@ public class WebSocketEventListener {
             chatMessage.setSender(username);
             chatMessage.setContent(username + " left the chat!");
 
-            // BROADCAST ONLY - DO NOT SAVE
+            // public chat
             messagingTemplate.convertAndSend("/topic/public", chatMessage);
         }
 
-        // Broadcast presence: offline
+        // presence
         if (senderUsername != null && !senderUsername.isBlank()) {
             presenceService.setOffline(senderUsername);
             messagingTemplate.convertAndSend("/topic/presence", Map.of(
