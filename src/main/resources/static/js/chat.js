@@ -39,6 +39,8 @@ const replyPreviewSenderEl = document.getElementById('replyPreviewSender');
 const replyPreviewTextEl = document.getElementById('replyPreviewText');
 const replyPreviewCancelBtn = document.getElementById('replyPreviewCancel');
 const dmPresenceDot = document.getElementById('dmPresenceDot');
+const dmConversationList = document.getElementById('dmConversationList');
+const dmTotalBadge = document.getElementById('dmTotalBadge');
 
 let stompClient = null;
 let selectedFile = null;
@@ -48,6 +50,13 @@ let mode = 'GROUP'; // GROUP | DIRECT
 let activeConversationId = null;
 let activeDmUsername = null;
 let dmSubscription = null;
+
+// ===== UNREAD STATE =====
+// Map of conversationId -> { count, otherUsername, otherDisplayName, lastPreview, lastTimestamp }
+const dmUnreadCounts = {};
+
+// Preview text max length (used for both conversation list and incoming message preview)
+const DM_PREVIEW_MAX_LENGTH = 40;
 
 // ===== PRESENCE STATE =====
 const onlineUsers = new Set(); // usernames of currently online users
@@ -78,6 +87,7 @@ function init() {
     connect();
     setupDmSearch();
     loadInitialPresence();
+    loadConversationSummaries(); // load DM shortcuts on startup
 
     // Reply cancel button
     replyPreviewCancelBtn.addEventListener('click', clearReply);
@@ -250,6 +260,148 @@ async function dmSearchUsers(q) {
     }
 }
 
+// ===== CONVERSATION LIST (DM SHORTCUTS + UNREAD COUNTS) =====
+async function loadConversationSummaries() {
+    try {
+        const res = await fetch('/api/conversations/my');
+        if (!res.ok) return;
+        const summaries = await res.json();
+        if (!Array.isArray(summaries)) return;
+
+        // Store unread counts from server (source of truth on load)
+        summaries.forEach(s => {
+            if (!dmUnreadCounts[s.conversationId]) {
+                dmUnreadCounts[s.conversationId] = {
+                    count: s.unreadCount || 0,
+                    otherUsername: s.otherUsername,
+                    otherDisplayName: s.otherDisplayName,
+                    lastPreview: s.lastMessagePreview || '',
+                    lastTimestamp: s.lastMessageTimestamp || null
+                };
+            } else {
+                // Refresh metadata but keep any in-memory count if already higher
+                const stored = dmUnreadCounts[s.conversationId];
+                stored.otherUsername = s.otherUsername;
+                stored.otherDisplayName = s.otherDisplayName;
+                stored.lastPreview = s.lastMessagePreview || '';
+                stored.lastTimestamp = s.lastMessageTimestamp || null;
+                // Use max of server count and in-memory count to avoid losing increments
+                stored.count = Math.max(stored.count, s.unreadCount || 0);
+            }
+        });
+
+        renderConversationList(summaries);
+        updateTotalUnreadBadge();
+    } catch (e) {
+        console.error('Failed to load conversation summaries', e);
+    }
+}
+
+function renderConversationList(summaries) {
+    dmConversationList.innerHTML = '';
+
+    if (!summaries || summaries.length === 0) return;
+
+    summaries.forEach(s => {
+        const item = document.createElement('div');
+        item.className = 'dm-conv-item';
+        item.setAttribute('data-conv-id', s.conversationId);
+
+        const isActive = s.conversationId === activeConversationId;
+        if (isActive) item.classList.add('active');
+
+        const stored = dmUnreadCounts[s.conversationId];
+        const unread = stored ? stored.count : (s.unreadCount || 0);
+        const isOnline = onlineUsers.has((s.otherUsername || '').toLowerCase());
+
+        item.innerHTML = `
+            <div class="dm-conv-avatar">${escapeHtml((s.otherDisplayName || s.otherUsername || '?')[0].toUpperCase())}</div>
+            <div class="dm-conv-info">
+                <div class="dm-conv-name">
+                    <span class="presence-dot ${isOnline ? 'presence-online' : 'presence-offline'}" style="width:8px;height:8px;"></span>
+                    ${escapeHtml(s.otherDisplayName || s.otherUsername || '')}
+                    <span class="dm-conv-username">@${escapeHtml(s.otherUsername || '')}</span>
+                </div>
+                <div class="dm-conv-preview">${escapeHtml(s.lastMessagePreview || 'No messages yet')}</div>
+            </div>
+            ${unread > 0 ? `<span class="dm-unread-badge">${unread > 99 ? '99+' : unread}</span>` : ''}
+        `;
+
+        item.addEventListener('click', () => openDirectChat(s.otherUsername, s.otherDisplayName));
+        dmConversationList.appendChild(item);
+    });
+}
+
+function updateConversationListItem(conversationId, newPreview) {
+    const item = dmConversationList.querySelector(`[data-conv-id="${conversationId}"]`);
+    if (!item) return;
+
+    // Update preview text
+    const previewEl = item.querySelector('.dm-conv-preview');
+    if (previewEl && newPreview !== undefined) {
+        previewEl.textContent = newPreview;
+    }
+
+    // Update unread badge
+    const stored = dmUnreadCounts[conversationId];
+    const unread = stored ? stored.count : 0;
+    let badge = item.querySelector('.dm-unread-badge');
+
+    if (unread > 0) {
+        if (!badge) {
+            badge = document.createElement('span');
+            badge.className = 'dm-unread-badge';
+            item.appendChild(badge);
+        }
+        badge.textContent = unread > 99 ? '99+' : unread;
+    } else {
+        if (badge) badge.remove();
+    }
+
+    // Mark active state
+    item.classList.toggle('active', conversationId === activeConversationId);
+}
+
+function clearConversationUnread(conversationId) {
+    if (dmUnreadCounts[conversationId]) {
+        dmUnreadCounts[conversationId].count = 0;
+    }
+    updateConversationListItem(conversationId);
+    updateTotalUnreadBadge();
+}
+
+function incrementConversationUnread(conversationId, previewText) {
+    if (dmUnreadCounts[conversationId]) {
+        dmUnreadCounts[conversationId].count++;
+        if (previewText !== undefined) {
+            dmUnreadCounts[conversationId].lastPreview = previewText;
+        }
+    }
+    updateConversationListItem(conversationId, previewText);
+    updateTotalUnreadBadge();
+    // Move this conversation to top of list
+    bringConversationToTop(conversationId);
+}
+
+function bringConversationToTop(conversationId) {
+    const item = dmConversationList.querySelector(`[data-conv-id="${conversationId}"]`);
+    if (item && dmConversationList.firstChild !== item) {
+        dmConversationList.insertBefore(item, dmConversationList.firstChild);
+    }
+}
+
+function updateTotalUnreadBadge() {
+    let total = 0;
+    Object.values(dmUnreadCounts).forEach(s => { total += s.count || 0; });
+
+    if (total > 0) {
+        dmTotalBadge.textContent = total > 99 ? '99+' : total;
+        dmTotalBadge.classList.remove('hidden');
+    } else {
+        dmTotalBadge.classList.add('hidden');
+    }
+}
+
 // ===== OPEN DM =====
 async function openDirectChat(targetUsername, targetDisplayName) {
     if (!targetUsername) return;
@@ -287,6 +439,9 @@ async function openDirectChat(targetUsername, targetDisplayName) {
 
         // mark messages as read
         markConversationAsRead(activeConversationId);
+
+        // clear unread count for this conversation in UI
+        clearConversationUnread(activeConversationId);
 
         // update presence dot
         updateDmPresenceDot();
@@ -485,9 +640,53 @@ function onDirectMessageReceived(payload) {
     renderDirectMessage(body);
     dmMessageArea.scrollTop = dmMessageArea.scrollHeight;
 
-    // If a new message arrives and this DM panel is open and active, mark as read
-    if (activeConversationId && body.senderUsername && body.senderUsername.toLowerCase() !== username) {
-        markConversationAsRead(activeConversationId);
+    // Determine the conversation id from the message
+    const convId = body.conversationId || activeConversationId;
+
+    // If this message is from someone else (not me)
+    const isFromMe = body.senderUsername && body.senderUsername.toLowerCase() === username;
+    if (!isFromMe && convId) {
+        if (convId === activeConversationId) {
+            // Active conversation: mark as read immediately
+            markConversationAsRead(activeConversationId);
+        } else {
+            // Non-active conversation: increment unread count
+            let preview = '';
+            if (body.type === 'FILE') {
+                preview = '📎 ' + (body.fileName || 'File');
+            } else {
+                preview = body.content ? (body.content.length > DM_PREVIEW_MAX_LENGTH ? body.content.substring(0, DM_PREVIEW_MAX_LENGTH) + '…' : body.content) : '';
+            }
+            // Ensure the conversation is tracked even if not yet in our list
+            if (!dmUnreadCounts[convId]) {
+                dmUnreadCounts[convId] = {
+                    count: 0,
+                    otherUsername: body.senderUsername || '',
+                    otherDisplayName: body.sender || body.senderUsername || '',
+                    lastPreview: preview,
+                    lastTimestamp: null
+                };
+                // Reload full list to get proper metadata for new unknown conversation
+                loadConversationSummaries();
+            } else {
+                incrementConversationUnread(convId, preview);
+            }
+        }
+    }
+
+    // Update the conversation list preview for the active conversation when I send
+    if (isFromMe && convId) {
+        let preview = '';
+        if (body.type === 'FILE') {
+            preview = '📎 ' + (body.fileName || 'File');
+        } else {
+            preview = body.content ? (body.content.length > DM_PREVIEW_MAX_LENGTH ? body.content.substring(0, DM_PREVIEW_MAX_LENGTH) + '…' : body.content) : '';
+        }
+        if (dmUnreadCounts[convId]) {
+            dmUnreadCounts[convId].lastPreview = preview;
+        }
+        updateConversationListItem(convId, preview);
+        bringConversationToTop(convId);
     }
 }
 

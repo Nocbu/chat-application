@@ -1,5 +1,6 @@
 package com.example.chat_application.controller;
 
+import com.example.chat_application.DTO.ConversationSummaryDTO;
 import com.example.chat_application.Repositories.UserRepository;
 import com.example.chat_application.Services.ConversationService;
 import com.example.chat_application.model.User;
@@ -8,6 +9,7 @@ import jakarta.servlet.http.HttpSession;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -50,5 +52,30 @@ public class ConversationController {
                 "conversationId", c.getId(),
                 "pairKey", c.getPairKey()
         ));
+    }
+
+    /**
+     * Returns a summary list of all direct conversations for the current user,
+     * including last message preview and unread count.
+     */
+    @GetMapping("/my")
+    public ResponseEntity<?> myConversations(HttpSession session) {
+        String myUsername = (String) session.getAttribute("username");
+
+        if (myUsername == null || myUsername.isBlank()) {
+            String email = (String) session.getAttribute("userEmail");
+            if (email == null || email.isBlank()) {
+                return ResponseEntity.status(401).body(Map.of("success", false, "message", "Not authenticated."));
+            }
+            User me = userRepository.findByEmail(email).orElse(null);
+            if (me == null || me.getUsername() == null || me.getUsername().isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Username not set."));
+            }
+            myUsername = me.getUsername().trim().toLowerCase();
+            session.setAttribute("username", myUsername);
+        }
+
+        List<ConversationSummaryDTO> summaries = conversationService.getConversationSummaries(myUsername);
+        return ResponseEntity.ok(summaries);
     }
 }
