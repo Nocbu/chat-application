@@ -25,7 +25,7 @@
         <!-- MODE TABS -->
         <div class="chat-tabs">
             <button id="tabGroup" class="chat-tab active">Group</button>
-            <button id="tabDirect" class="chat-tab">Direct</button>
+            <button id="tabDirect" class="chat-tab">Direct <span id="dmTotalBadge" class="dm-total-badge hidden">0</span></button>
         </div>
 
         <!-- Admin Panel (hidden for normal users) -->
@@ -61,8 +61,11 @@
                 </div>
 
                 <div class="dm-hint">
-                    Search a username and click to start chatting.
+                    Search a username above, or pick a recent conversation below.
                 </div>
+
+                <!-- Recent DM conversations list -->
+                <div id="dmConversationList" class="dm-conversation-list"></div>
             </aside>
 
             <!-- CHAT PANELS -->
