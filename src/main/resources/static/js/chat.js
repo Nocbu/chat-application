@@ -1194,9 +1194,11 @@ function setupAdminControls() {
             const users = await res.json();
             const output = document.getElementById('admin-output');
             output.classList.remove('hidden');
-            output.textContent = users.map(u =>
-                `👤 ${u.displayName} | ${u.email} | ${u.authProvider} | ${u.enabled ? '✅ Active' : '🚫 Banned'}`
-            ).join('\n');
+            output.innerHTML = users.map(u => {
+                const isOnline = onlineUsers.has((u.username || '').toLowerCase());
+                const presenceDot = `<span class="presence-dot ${isOnline ? 'presence-online' : 'presence-offline'}" style="display:inline-block;vertical-align:middle;margin-right:4px;"></span>${isOnline ? 'Online' : 'Offline'}`;
+                return `<div style="padding:4px 0;border-bottom:1px solid #333;">👤 ${escapeHtml(u.displayName || '')} (@${escapeHtml(u.username || '')}) | ${escapeHtml(u.email || '')} | ${escapeHtml(u.authProvider || '')} | ${u.enabled ? '✅ Active' : '🚫 Banned'} | ${presenceDot}</div>`;
+            }).join('');
         } catch (e) {
             alert('Error fetching users');
         }
