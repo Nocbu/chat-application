@@ -1,17 +1,17 @@
 'use strict';
 
-// ===== USER SESSION =====
+
 const userEmail = localStorage.getItem('userEmail');
 const displayName = localStorage.getItem('displayName');
 const userRole = localStorage.getItem('role');
 const username = (localStorage.getItem('username') || '').trim().toLowerCase();
 
-// Redirect to login if not authenticated
+
 if (!userEmail || !displayName) {
     window.location.href = '/index.html';
 }
 
-// ===== DOM ELEMENTS =====
+
 const messageArea = document.getElementById('messageArea');
 const dmMessageArea = document.getElementById('dmMessageArea');
 const dmPanel = document.getElementById('dmPanel');
@@ -45,34 +45,34 @@ const dmTotalBadge = document.getElementById('dmTotalBadge');
 let stompClient = null;
 let selectedFile = null;
 
-// ===== DM STATE =====
-let mode = 'GROUP'; // GROUP | DIRECT
+
+let mode = 'GROUP'; 
 let activeConversationId = null;
 let activeDmUsername = null;
-// Persistent subscriptions to all known conversations (never unsubscribed during session)
+
 const dmConvSubscriptions = {};
 
-// ===== UNREAD STATE =====
-// Map of conversationId -> { count, otherUsername, otherDisplayName, lastPreview, lastTimestamp }
+
+
 const dmUnreadCounts = {};
 
-// Preview text max length (used for both conversation list and incoming message preview)
+
 const DM_PREVIEW_MAX_LENGTH = 40;
 
-// ===== PRESENCE STATE =====
-const onlineUsers = new Set(); // usernames of currently online users
 
-// ===== REPLY STATE =====
-let pendingReply = null; // { messageId, content, sender }
+const onlineUsers = new Set(); 
 
-// Avatar colors
+
+let pendingReply = null; 
+
+
 const colors = [
     '#2196F3', '#32c787', '#00BCD4', '#ff5652',
     '#ffc107', '#ff85af', '#FF9800', '#39bbb0',
     '#7c4dff', '#e91e63', '#00e676', '#304ffe'
 ];
 
-// ===== INITIALIZE =====
+
 function init() {
     userInfoElement.textContent = `${displayName} (${userRole})`;
 
@@ -81,20 +81,20 @@ function init() {
         setupAdminControls();
     }
 
-    // default mode
+    
     setMode('GROUP');
 
     loadChatHistory();
     connect();
     setupDmSearch();
     loadInitialPresence();
-    loadConversationSummaries(); // load DM shortcuts on startup
+    loadConversationSummaries(); 
 
-    // Reply cancel button
+    
     replyPreviewCancelBtn.addEventListener('click', clearReply);
 }
 
-// ===== MODE SWITCH =====
+
 function setMode(newMode) {
     mode = newMode;
 
@@ -123,7 +123,7 @@ tabDirect.addEventListener('click', () => {
     }
 });
 
-// ===== WEBSOCKET CONNECT =====
+
 function connect() {
     const socket = new SockJS('/ws');
     stompClient = Stomp.over(socket);
@@ -133,18 +133,18 @@ function connect() {
 }
 
 function onConnected() {
-    // GROUP subscription
+    
     stompClient.subscribe('/topic/public', onGroupMessageReceived);
 
-    // PRESENCE subscription
+    
     stompClient.subscribe('/topic/presence', onPresenceReceived);
 
-    // Personal notification topic for live DM sidebar updates
+    
     if (username) {
         stompClient.subscribe(`/topic/user/${username}`, onPersonalNotificationReceived);
     }
 
-    // Send join message (also stores username in websocket session attributes on backend)
+    
     stompClient.send('/app/chat.addUser', {}, JSON.stringify({
         sender: displayName,
         senderEmail: userEmail,
@@ -154,7 +154,7 @@ function onConnected() {
 
     connectingElement.classList.add('hidden');
 
-    // Subscribe to all already-loaded conversations (in case loadConversationSummaries ran first)
+    
     subscribeToAllConversations();
 }
 
@@ -163,7 +163,7 @@ function onError() {
     connectingElement.style.color = '#ff5652';
 }
 
-// ===== LOAD GROUP CHAT HISTORY =====
+
 async function loadChatHistory() {
     try {
         const response = await fetch('/api/messages/history');
@@ -175,7 +175,7 @@ async function loadChatHistory() {
     }
 }
 
-// ===== INITIAL PRESENCE LOAD =====
+
 async function loadInitialPresence() {
     try {
         const res = await fetch('/api/users/online');
@@ -189,7 +189,7 @@ async function loadInitialPresence() {
     }
 }
 
-// ===== PRESENCE HANDLER =====
+
 function onPresenceReceived(payload) {
     const data = JSON.parse(payload.body);
     if (!data || !data.username) return;
@@ -210,7 +210,7 @@ function updateDmPresenceDot() {
     dmPresenceDot.title = isOnline ? 'Online' : 'Offline';
 }
 
-// ===== DM SEARCH =====
+
 function setupDmSearch() {
     let timer = null;
 
@@ -269,7 +269,7 @@ async function dmSearchUsers(q) {
     }
 }
 
-// ===== CONVERSATION LIST (DM SHORTCUTS + UNREAD COUNTS) =====
+
 async function loadConversationSummaries() {
     try {
         const res = await fetch('/api/conversations/my');
@@ -277,7 +277,7 @@ async function loadConversationSummaries() {
         const summaries = await res.json();
         if (!Array.isArray(summaries)) return;
 
-        // Store unread counts from server (source of truth on load)
+        
         summaries.forEach(s => {
             if (!dmUnreadCounts[s.conversationId]) {
                 dmUnreadCounts[s.conversationId] = {
@@ -288,20 +288,20 @@ async function loadConversationSummaries() {
                     lastTimestamp: s.lastMessageTimestamp || null
                 };
             } else {
-                // Refresh metadata but keep any in-memory count if already higher
+                
                 const stored = dmUnreadCounts[s.conversationId];
                 stored.otherUsername = s.otherUsername;
                 stored.otherDisplayName = s.otherDisplayName;
                 stored.lastPreview = s.lastMessagePreview || '';
                 stored.lastTimestamp = s.lastMessageTimestamp || null;
-                // Use max of server count and in-memory count to avoid losing increments
+                
                 stored.count = Math.max(stored.count, s.unreadCount || 0);
             }
         });
 
         renderConversationList(summaries);
         updateTotalUnreadBadge();
-        // Subscribe to all loaded conversations so live updates are received
+        
         subscribeToAllConversations();
     } catch (e) {
         console.error('Failed to load conversation summaries', e);
@@ -347,13 +347,13 @@ function updateConversationListItem(conversationId, newPreview) {
     const item = dmConversationList.querySelector(`[data-conv-id="${conversationId}"]`);
     if (!item) return;
 
-    // Update preview text
+    
     const previewEl = item.querySelector('.dm-conv-preview');
     if (previewEl && newPreview !== undefined) {
         previewEl.textContent = newPreview;
     }
 
-    // Update unread badge
+    
     const stored = dmUnreadCounts[conversationId];
     const unread = stored ? stored.count : 0;
     let badge = item.querySelector('.dm-unread-badge');
@@ -369,7 +369,7 @@ function updateConversationListItem(conversationId, newPreview) {
         if (badge) badge.remove();
     }
 
-    // Mark active state
+    
     item.classList.toggle('active', conversationId === activeConversationId);
 }
 
@@ -390,7 +390,7 @@ function incrementConversationUnread(conversationId, previewText) {
     }
     updateConversationListItem(conversationId, previewText);
     updateTotalUnreadBadge();
-    // Move this conversation to top of list
+    
     bringConversationToTop(conversationId);
 }
 
@@ -413,7 +413,7 @@ function updateTotalUnreadBadge() {
     }
 }
 
-// ===== CONVERSATION SUBSCRIPTIONS =====
+
 function subscribeToConversation(conversationId) {
     if (!conversationId || dmConvSubscriptions[conversationId]) return;
     if (!stompClient || !stompClient.connected) return;
@@ -427,7 +427,7 @@ function subscribeToAllConversations() {
     Object.keys(dmUnreadCounts).forEach(convId => subscribeToConversation(convId));
 }
 
-// ===== PERSONAL NOTIFICATION HANDLER (CONV_UPDATE) =====
+
 function onPersonalNotificationReceived(payload) {
     const data = JSON.parse(payload.body);
     if (!data || data.type !== 'CONV_UPDATE') return;
@@ -442,11 +442,11 @@ function onPersonalNotificationReceived(payload) {
     const lastTimestamp = data.lastTimestamp || null;
     const isFromMe = senderUsername === username;
 
-    // Ensure we're subscribed to this conversation for UPDATE events (deletes, receipts)
+    
     subscribeToConversation(convId);
 
     if (!dmUnreadCounts[convId]) {
-        // Brand-new conversation not previously known — add it to the sidebar
+        
         dmUnreadCounts[convId] = {
             count: (!isFromMe && convId !== activeConversationId) ? 1 : 0,
             otherUsername: otherUsername,
@@ -457,7 +457,7 @@ function onPersonalNotificationReceived(payload) {
         addNewConversationItem(convId, otherUsername, otherDisplayName, preview,
             dmUnreadCounts[convId].count);
     } else {
-        // Update existing entry
+        
         const stored = dmUnreadCounts[convId];
         if (otherUsername) stored.otherUsername = stored.otherUsername || otherUsername;
         if (otherDisplayName) stored.otherDisplayName = stored.otherDisplayName || otherDisplayName;
@@ -473,7 +473,7 @@ function onPersonalNotificationReceived(payload) {
             updateConversationListItem(convId, preview);
             bringConversationToTop(convId);
         } else {
-            // Entry is in state (e.g. stub from openDirectChat) but not yet rendered in DOM
+            
             addNewConversationItem(convId, stored.otherUsername, stored.otherDisplayName,
                 preview, stored.count);
         }
@@ -483,7 +483,7 @@ function onPersonalNotificationReceived(payload) {
 }
 
 function addNewConversationItem(convId, otherUsername, otherDisplayName, preview, unreadCount) {
-    // Remove stale entry if any
+    
     const existing = dmConversationList.querySelector(`[data-conv-id="${convId}"]`);
     if (existing) existing.remove();
 
@@ -510,7 +510,7 @@ function addNewConversationItem(convId, otherUsername, otherDisplayName, preview
 
     item.addEventListener('click', () => openDirectChat(otherUsername, otherDisplayName));
 
-    // Insert at top of list (most recent)
+    
     if (dmConversationList.firstChild) {
         dmConversationList.insertBefore(item, dmConversationList.firstChild);
     } else {
@@ -518,7 +518,7 @@ function addNewConversationItem(convId, otherUsername, otherDisplayName, preview
     }
 }
 
-// ===== OPEN DM =====
+
 async function openDirectChat(targetUsername, targetDisplayName) {
     if (!targetUsername) return;
 
@@ -540,8 +540,8 @@ async function openDirectChat(targetUsername, targetDisplayName) {
 
         dmWithEl.textContent = `${targetDisplayName ? targetDisplayName + ' ' : ''}(@${targetUsername})`;
 
-        // Ensure the conversation is tracked in dmUnreadCounts so the display name is
-        // available when the CONV_UPDATE notification arrives from the personal topic.
+        
+        
         if (!dmUnreadCounts[activeConversationId]) {
             dmUnreadCounts[activeConversationId] = {
                 count: 0,
@@ -552,28 +552,28 @@ async function openDirectChat(targetUsername, targetDisplayName) {
             };
         }
 
-        // reset UI
+        
         dmMessageArea.innerHTML = '';
 
-        // Subscribe to conversation (persistent — never unsubscribed during the session)
+        
         subscribeToConversation(activeConversationId);
 
-        // load history (and mark as read)
+        
         await loadDirectHistory(activeConversationId);
 
-        // mark messages as read
+        
         markConversationAsRead(activeConversationId);
 
-        // clear unread count for this conversation in UI
+        
         clearConversationUnread(activeConversationId);
 
-        // update presence dot
+        
         updateDmPresenceDot();
 
-        // clear any pending reply when switching conversations
+        
         clearReply();
 
-        // hide results dropdown
+        
         dmSearchResults.classList.add('hidden');
         dmSearchInput.value = targetUsername;
 
@@ -589,7 +589,7 @@ async function loadDirectHistory(conversationId) {
         const res = await fetch(`/api/messages/direct/${conversationId}`);
         const messages = await res.json();
 
-        // Expect list of ChatMessage
+        
         if (Array.isArray(messages)) {
             messages.forEach(m => renderDirectMessage(m));
             dmMessageArea.scrollTop = dmMessageArea.scrollHeight;
@@ -607,7 +607,7 @@ async function markConversationAsRead(conversationId) {
     }
 }
 
-// ===== SEND MESSAGE (GROUP OR DIRECT) =====
+
 messageForm.addEventListener('submit', (e) => {
     e.preventDefault();
 
@@ -655,7 +655,7 @@ messageForm.addEventListener('submit', (e) => {
     clearReply();
 });
 
-// ===== FILE HANDLING =====
+
 fileInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -692,7 +692,7 @@ async function uploadAndSendFile() {
             return;
         }
 
-        // build payload
+        
         const payload = {
             sender: displayName,
             senderEmail: userEmail,
@@ -720,7 +720,7 @@ async function uploadAndSendFile() {
             }));
         }
 
-        // Clear file selection
+        
         selectedFile = null;
         fileInput.value = '';
         filePreview.classList.add('hidden');
@@ -732,7 +732,7 @@ async function uploadAndSendFile() {
     }
 }
 
-// ===== GROUP HANDLER =====
+
 function onGroupMessageReceived(payload) {
     const message = JSON.parse(payload.body);
 
@@ -741,7 +741,7 @@ function onGroupMessageReceived(payload) {
         return;
     }
 
-    // Guard: ignore any message that is explicitly scoped to DIRECT
+    
     if (message.scope === 'DIRECT') {
         return;
     }
@@ -750,25 +750,25 @@ function onGroupMessageReceived(payload) {
     messageArea.scrollTop = messageArea.scrollHeight;
 }
 
-// ===== DM HANDLER =====
+
 function onDirectMessageReceived(payload) {
     const body = JSON.parse(payload.body);
 
-    // UPDATE payload (delete events / read receipts)
+    
     if (body && body.type === 'UPDATE') {
         applyDmUpdate(body);
         return;
     }
 
-    // Only render messages that belong to the currently active conversation.
-    // Background conversations (subscribed at startup) must not bleed into the active chat area.
+    
+    
     const convId = body.conversationId || activeConversationId;
     if (convId !== activeConversationId) return;
 
     renderDirectMessage(body);
     dmMessageArea.scrollTop = dmMessageArea.scrollHeight;
 
-    // Mark as read when we receive a message from someone else in the active conversation
+    
     const isFromMe = body.senderUsername && body.senderUsername.toLowerCase() === username;
     if (!isFromMe) {
         markConversationAsRead(activeConversationId);
@@ -779,7 +779,7 @@ function applyDmUpdate(update) {
     const messageId = update.messageId;
 
     if (update.action === 'READ_RECEIPT') {
-        // Mark all messages from me as read (upgrade ✓ to ✓✓)
+        
         const readerUsername = (update.readerUsername || '').toLowerCase();
         const messageIds = update.messageIds || [];
         messageIds.forEach(id => {
@@ -801,25 +801,25 @@ function applyDmUpdate(update) {
     if (!el) return;
 
     if (update.action === 'DELETED_FOR_EVERYONE') {
-        // replace bubble content
+        
         const contentEl = el.querySelector('.message-content');
         if (contentEl) {
             contentEl.textContent = 'This message was deleted';
             contentEl.classList.add('deleted-placeholder');
         }
 
-        // remove file attachment UI if present
+        
         const fileAttachment = el.querySelector('.file-attachment');
         if (fileAttachment) fileAttachment.remove();
         const img = el.querySelector('.chat-image-preview');
         if (img) img.remove();
 
-        // remove receipt tick if present
+        
         const tick = el.querySelector('.read-receipt');
         if (tick) tick.remove();
 
     } else if (update.action === 'DELETED_FOR_ME') {
-        // Only remove if the update is for me
+        
         if ((update.username || '').toLowerCase() === username) {
             el.style.animation = 'fadeOut 0.3s ease';
             setTimeout(() => el.remove(), 300);
@@ -827,26 +827,26 @@ function applyDmUpdate(update) {
     }
 }
 
-// ===== RENDER GROUP MESSAGE (existing behavior) =====
+
 function renderGroupMessage(message) {
-    // reuse your old renderMessage body with messageArea target
+    
     renderMessageInto(messageArea, message, { allowAdminDelete: userRole === 'ADMIN', allowDmMenu: false });
 }
 
-// ===== RENDER DIRECT MESSAGE =====
+
 function renderDirectMessage(message) {
-    // if message deleted-for-everyone and backend blanked it, show placeholder anyway
+    
     const opts = { allowAdminDelete: false, allowDmMenu: true };
     renderMessageInto(dmMessageArea, message, opts);
 }
 
-// Core renderer that can render into group or dm list
+
 function renderMessageInto(targetUl, message, opts) {
     const li = document.createElement('li');
     li.setAttribute('data-message-id', message.id || '');
     li.style.position = 'relative';
 
-    // JOIN/LEAVE only relevant for group; ignore in DM
+    
     if (message.type === 'JOIN' || message.type === 'LEAVE') {
         li.classList.add('event-message');
         li.textContent = message.type === 'JOIN'
@@ -857,21 +857,21 @@ function renderMessageInto(targetUl, message, opts) {
         return;
     }
 
-    // decide styling
+    
     const isFile = message.type === 'FILE';
     li.classList.add(isFile ? 'file-message' : 'chat-message');
 
-    // Avatar
+    
     const avatar = createAvatar(message.sender);
     li.appendChild(avatar);
 
-    // Username label
+    
     const usernameEl = document.createElement('span');
     usernameEl.classList.add('username');
     usernameEl.textContent = message.sender;
     li.appendChild(usernameEl);
 
-    // Reply quote block (shown if this message is a reply)
+    
     if (message.replyToMessageId && message.replyToSender) {
         const quoteEl = document.createElement('div');
         quoteEl.classList.add('reply-quote');
@@ -888,7 +888,7 @@ function renderMessageInto(targetUl, message, opts) {
             : '📎 File';
         quoteEl.appendChild(quoteText);
 
-        // Clicking the quote scrolls to the original message
+        
         quoteEl.style.cursor = 'pointer';
         quoteEl.addEventListener('click', () => {
             const orig = targetUl.querySelector(`[data-message-id="${message.replyToMessageId}"]`);
@@ -902,11 +902,11 @@ function renderMessageInto(targetUl, message, opts) {
         li.appendChild(quoteEl);
     }
 
-    // Content
+    
     const contentEl = document.createElement('span');
     contentEl.classList.add('message-content');
 
-    // Deleted placeholder
+    
     const deletedForEveryone = !!message.deletedForEveryone;
     if (deletedForEveryone) {
         contentEl.textContent = 'This message was deleted';
@@ -916,7 +916,7 @@ function renderMessageInto(targetUl, message, opts) {
     }
     li.appendChild(contentEl);
 
-    // File attachment UI (if not deleted)
+    
     if (isFile && !deletedForEveryone) {
         const fileBox = document.createElement('div');
         fileBox.classList.add('file-attachment');
@@ -960,11 +960,11 @@ function renderMessageInto(targetUl, message, opts) {
         }
     }
 
-    // Timestamp
+    
     const timeEl = createTimestamp(message.timestamp);
     li.appendChild(timeEl);
 
-    // Read receipt tick (DM only, for my own messages)
+    
     if (opts.allowDmMenu && !deletedForEveryone) {
         const mineByUsername = message.senderUsername && username && message.senderUsername.toLowerCase() === username;
         const mineByEmail = message.senderEmail && message.senderEmail === userEmail;
@@ -986,7 +986,7 @@ function renderMessageInto(targetUl, message, opts) {
         }
     }
 
-    // Reply button (shown on hover for non-deleted messages)
+    
     if (!deletedForEveryone && message.id) {
         const replyBtn = document.createElement('button');
         replyBtn.className = 'msg-reply-btn';
@@ -1003,15 +1003,15 @@ function renderMessageInto(targetUl, message, opts) {
         li.appendChild(replyBtn);
     }
 
-    // Admin delete button (group only)
+    
     if (opts.allowAdminDelete) {
         li.appendChild(createDeleteButton(message.id));
     }
 
-    // DM delete menu (direct only)
+    
     if (opts.allowDmMenu && mode === 'DIRECT') {
-        // Only show menu for messages that are mine (best-effort check)
-        // Prefer senderUsername if present; fallback to senderEmail
+        
+        
         const mineByUsername = message.senderUsername && username && message.senderUsername.toLowerCase() === username;
         const mineByEmail = message.senderEmail && message.senderEmail === userEmail;
         const isMine = mineByUsername || mineByEmail;
@@ -1024,7 +1024,7 @@ function renderMessageInto(targetUl, message, opts) {
     targetUl.appendChild(li);
 }
 
-// ===== REPLY HELPERS =====
+
 function setReply(reply) {
     pendingReply = reply;
     replyPreviewSenderEl.textContent = reply.sender;
@@ -1040,7 +1040,7 @@ function clearReply() {
     replyPreviewTextEl.textContent = '';
 }
 
-// ===== DM MENU =====
+
 function createDmMenuButton(message) {
     const btn = document.createElement('button');
     btn.className = 'msg-menu-btn';
@@ -1050,7 +1050,7 @@ function createDmMenuButton(message) {
     btn.addEventListener('click', (e) => {
         e.stopPropagation();
 
-        // close existing menus
+        
         document.querySelectorAll('.msg-menu').forEach(m => m.remove());
 
         const menu = document.createElement('div');
@@ -1076,7 +1076,7 @@ function createDmMenuButton(message) {
         btn.parentElement.appendChild(menu);
     });
 
-    // click outside closes menu
+    
     document.addEventListener('click', () => {
         document.querySelectorAll('.msg-menu').forEach(m => m.remove());
     }, { once: true });
@@ -1106,7 +1106,7 @@ async function dmDeleteForEveryone(messageId) {
     }
 }
 
-// ===== HANDLE SYSTEM MESSAGES (Admin actions) =====
+
 function handleSystemMessage(message) {
     const content = message.content;
 
@@ -1147,7 +1147,7 @@ function handleSystemMessage(message) {
     messageArea.scrollTop = messageArea.scrollHeight;
 }
 
-// ===== ADMIN CONTROLS (unchanged from your current file) =====
+
 function setupAdminControls() {
     const adminUsername = localStorage.getItem('adminUsername');
     const adminPassword = localStorage.getItem('adminPassword');
@@ -1247,7 +1247,7 @@ async function adminDeleteMessage(messageId) {
     await adminAction({ action: 'DELETE_MESSAGE', messageId }, adminUsername, adminPassword);
 }
 
-// ===== HELPERS =====
+
 function truncateText(text, maxLength) {
     if (!text) return '';
     return text.length > maxLength ? text.slice(0, maxLength) + '…' : text;
@@ -1323,7 +1323,7 @@ function escapeHtml(str) {
         .replaceAll("'", '&#039;');
 }
 
-// ===== LOGOUT =====
+
 function logout() {
     localStorage.clear();
     fetch('/api/auth/logout', { method: 'POST' }).finally(() => {
@@ -1333,5 +1333,5 @@ function logout() {
 
 logoutBtn.addEventListener('click', logout);
 
-// ===== START =====
+
 init();

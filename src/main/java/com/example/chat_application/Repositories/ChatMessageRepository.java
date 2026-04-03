@@ -1,6 +1,4 @@
 package com.example.chat_application.Repositories;
-
-
 import com.example.chat_application.model.ChatMessage;
 import com.example.chat_application.model.MessageType;
 import org.springframework.data.mongodb.repository.MongoRepository;
@@ -17,10 +15,6 @@ public interface ChatMessageRepository extends MongoRepository<ChatMessage, Stri
     Optional<ChatMessage> findTop1ByScopeAndConversationIdOrderByTimestampDesc(String scope, String conversationId);
     void deleteAllByType(MessageType type);
 
-    /**
-     * Counts unread messages in a conversation for the viewer:
-     * messages where scope=DIRECT, sent by someone else, not deleted, not yet in readBy list.
-     */
     @Query(value = "{'scope': 'DIRECT', 'conversationId': ?0, 'senderUsername': {$ne: ?1}, "
             + "'deletedForEveryone': false, "
             + "'deletedFor': {$not: {$elemMatch: {$eq: ?1}}}, "

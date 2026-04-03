@@ -1,4 +1,4 @@
-/* ===== RESET & BASE ===== */
+
 * {
     box-sizing: border-box;
     margin: 0;
@@ -18,7 +18,7 @@ body {
     display: none !important;
 }
 
-/* ===== AUTH PAGES (Login/Register) ===== */
+
 #auth-page {
     display: flex;
     justify-content: center;
@@ -49,7 +49,7 @@ body {
     font-size: 14px;
 }
 
-/* Auth Messages (LOGIN/REGISTER) */
+
 .auth-container .auth-message,
 #auth-page .auth-message {
     padding: 12px;
@@ -61,7 +61,7 @@ body {
     line-height: 1.4;
 }
 
-/* Light theme message colors */
+
 .auth-container .auth-message.success,
 #auth-page .auth-message.success {
     background: #ecfdf5;
@@ -76,7 +76,7 @@ body {
     color: #991b1b;
 }
 
-/* Password Requirements */
+
 .password-requirements {
     text-align: left;
     margin-top: 8px;
@@ -107,7 +107,7 @@ body {
     color: #e74c3c;
 }
 
-/* Divider */
+
 .divider {
     display: flex;
     align-items: center;
@@ -127,7 +127,7 @@ body {
     font-size: 13px;
 }
 
-/* Auth Footer */
+
 .auth-footer {
     margin-top: 20px;
     font-size: 14px;
@@ -144,7 +144,7 @@ body {
     text-decoration: underline;
 }
 
-/* ===== FORM CONTROLS ===== */
+
 .form-group {
     margin-bottom: 15px;
 }
@@ -172,7 +172,7 @@ body {
     flex: 1;
 }
 
-/* ===== BUTTONS ===== */
+
 .btn {
     padding: 14px 28px;
     border: none;
@@ -261,7 +261,7 @@ body {
     background: rgba(255,255,255,0.3);
 }
 
-/* ===== CHAT PAGE ===== */
+
 #chat-page {
     width: 100%;
     max-width: 800px;
@@ -281,7 +281,7 @@ body {
     overflow: hidden;
 }
 
-/* Chat Header */
+
 .chat-header {
     background: linear-gradient(135deg, #667eea, #764ba2);
     color: #fff;
@@ -312,7 +312,7 @@ body {
     color: rgba(255, 255, 255, 0.7);
 }
 
-/* ===== ADMIN PANEL ===== */
+
 .admin-panel {
     background: #1a1a2e;
     color: #fff;
@@ -360,7 +360,7 @@ body {
     white-space: pre-wrap;
 }
 
-/* ===== MESSAGE AREA ===== */
+
 #messageArea {
     list-style: none;
     flex: 1;
@@ -383,7 +383,7 @@ body {
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* Event messages (join/leave/system) */
+
 #messageArea li.event-message {
     text-align: center;
     color: #888;
@@ -394,7 +394,7 @@ body {
     padding: 5px;
 }
 
-/* Chat messages */
+
 #messageArea li.chat-message {
     background: #e8ecf4;
     position: relative;
@@ -437,7 +437,7 @@ body {
     display: block;
 }
 
-/* File messages */
+
 #messageArea li.file-message {
     background: #e8f5e9;
     position: relative;
@@ -504,7 +504,7 @@ body {
     background: #764ba2;
 }
 
-/* Image preview in chat */
+
 .chat-image-preview {
     max-width: 300px;
     max-height: 200px;
@@ -518,7 +518,7 @@ body {
     transform: scale(1.05);
 }
 
-/* Admin delete button on messages */
+
 .msg-delete-btn {
     position: absolute;
     top: 5px;
@@ -539,7 +539,7 @@ body {
     opacity: 1;
 }
 
-/* ===== CHAT INPUT AREA ===== */
+
 .chat-input-area {
     padding: 12px 20px;
     background: #fff;
@@ -556,7 +556,7 @@ body {
     flex: 1;
 }
 
-/* File Preview Bar */
+
 .file-preview {
     display: flex;
     align-items: center;
@@ -575,7 +575,7 @@ body {
     white-space: nowrap;
 }
 
-/* ===== SCROLLBAR ===== */
+
 #messageArea::-webkit-scrollbar {
     width: 6px;
 }
@@ -589,7 +589,7 @@ body {
     border-radius: 3px;
 }
 
-/* ===== RESPONSIVE ===== */
+
 @media (max-width: 600px) {
     .auth-container {
         padding: 25px;
@@ -613,7 +613,7 @@ body {
     }
 }
 
-/* ===== Choose Username page (SCOPED styles to avoid breaking login/register) ===== */
+
 .auth-page {
     min-height: 100vh;
     width: 100%;
@@ -744,9 +744,7 @@ body {
     font-size: 12px;
     color: #94a3b8;
 }
-/* =========================
-   DIRECT MESSAGES (DM UI)
-   ========================= */
+
 
 .chat-tabs {
     display: flex;
@@ -776,7 +774,7 @@ body {
 .chat-main {
     display: flex;
     flex: 1;
-    min-height: 0; /* important for scroll areas */
+    min-height: 0;
 }
 
 .dm-sidebar {
@@ -872,7 +870,7 @@ body {
     color: #64748b;
 }
 
-/* DM message list uses same styles as messageArea but separate id */
+
 #dmMessageArea {
     list-style: none;
     flex: 1;
@@ -895,7 +893,7 @@ body {
     left: 10px;
     top: 10px;
 }
-/* DM message layout should match group layout */
+
 #dmMessageArea li.chat-message,
 #dmMessageArea li.file-message {
     padding-left: 55px;
@@ -911,7 +909,7 @@ body {
     animation: fadeIn 0.3s ease;
 }
 
-/* DM delete menu button (for own messages) */
+
 .msg-menu-btn {
     position: absolute;
     top: 6px;
@@ -961,12 +959,12 @@ body {
     color: #888;
 }
 
-/* Responsive: sidebar collapses */
+
 @media (max-width: 760px) {
     .dm-sidebar { width: 200px; }
 }
 
-/* ===== PRESENCE DOT ===== */
+
 .presence-dot {
     display: inline-block;
     width: 10px;
@@ -984,7 +982,7 @@ body {
     background: #9ca3af;
 }
 
-/* Presence dot in DM header */
+
 .dm-header .presence-dot {
     width: 12px;
     height: 12px;
@@ -992,7 +990,7 @@ body {
     align-self: center;
 }
 
-/* ===== READ RECEIPT TICK ===== */
+
 .read-receipt {
     font-size: 11px;
     color: #9ca3af;
@@ -1005,7 +1003,7 @@ body {
     color: #3b82f6;
 }
 
-/* ===== REPLY QUOTE (in message bubble) ===== */
+
 .reply-quote {
     display: flex;
     flex-direction: column;
@@ -1032,7 +1030,7 @@ body {
     text-overflow: ellipsis;
 }
 
-/* ===== REPLY PREVIEW STRIP (in input area) ===== */
+
 .reply-preview {
     display: flex;
     align-items: center;
@@ -1085,7 +1083,7 @@ body {
     color: #333;
 }
 
-/* ===== REPLY BUTTON (hover on message) ===== */
+
 .msg-reply-btn {
     position: absolute;
     top: 6px;
@@ -1106,7 +1104,7 @@ body {
     opacity: 1;
 }
 
-/* ===== HIGHLIGHT FLASH (for scroll-to-original) ===== */
+
 @keyframes highlightFlash {
     0%   { background: rgba(99, 102, 241, 0.25); }
     100% { background: transparent; }
@@ -1116,7 +1114,7 @@ body {
     animation: highlightFlash 1.5s ease;
 }
 
-/* ===== DM CONVERSATION LIST (WhatsApp-style shortcuts) ===== */
+
 .dm-conversation-list {
     display: flex;
     flex-direction: column;
@@ -1191,7 +1189,7 @@ body {
     margin-top: 2px;
 }
 
-/* Unread badge on conversation item */
+
 .dm-unread-badge {
     min-width: 20px;
     height: 20px;
@@ -1207,7 +1205,7 @@ body {
     flex-shrink: 0;
 }
 
-/* Total unread badge on the Direct tab button */
+
 .dm-total-badge {
     display: inline-flex;
     align-items: center;

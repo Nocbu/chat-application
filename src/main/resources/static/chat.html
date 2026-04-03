@@ -10,7 +10,6 @@
 <div id="chat-page">
     <div class="chat-container">
 
-        <!-- Chat Header -->
         <div class="chat-header">
             <div class="header-left">
                 <h2>💬 Chat Room</h2>
@@ -22,13 +21,12 @@
             </div>
         </div>
 
-        <!-- MODE TABS -->
         <div class="chat-tabs">
             <button id="tabGroup" class="chat-tab active">Group</button>
             <button id="tabDirect" class="chat-tab">Direct <span id="dmTotalBadge" class="dm-total-badge hidden">0</span></button>
         </div>
 
-        <!-- Admin Panel (hidden for normal users) -->
+
         <div id="admin-panel" class="admin-panel hidden">
             <div class="admin-header">
                 <h3>🛡️ Admin Controls</h3>
@@ -50,10 +48,8 @@
             </div>
         </div>
 
-        <!-- MAIN CONTENT -->
         <div class="chat-main">
 
-            <!-- DIRECT SIDEBAR -->
             <aside id="dmSidebar" class="dm-sidebar hidden">
                 <div class="dm-search">
                     <input id="dmSearchInput" class="form-control" type="text" placeholder="Search username..." autocomplete="off" />
@@ -64,17 +60,17 @@
                     Search a username above, or pick a recent conversation below.
                 </div>
 
-                <!-- Recent DM conversations list -->
+
                 <div id="dmConversationList" class="dm-conversation-list"></div>
             </aside>
 
-            <!-- CHAT PANELS -->
+
             <section class="chat-panels">
 
-                <!-- GROUP MESSAGES -->
+
                 <ul id="messageArea"></ul>
 
-                <!-- DIRECT MESSAGES -->
+
                 <div id="dmPanel" class="dm-panel hidden">
                     <div class="dm-header">
                         <div>
@@ -89,9 +85,9 @@
             </section>
         </div>
 
-        <!-- Message Input (used for BOTH group + dm) -->
+
         <div class="chat-input-area">
-            <!-- Reply preview strip (shown when replying to a message) -->
+
             <div id="reply-preview" class="reply-preview hidden">
                 <div class="reply-preview-bar"></div>
                 <div class="reply-preview-body">

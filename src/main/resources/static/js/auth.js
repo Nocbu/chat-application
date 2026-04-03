@@ -1,62 +1,30 @@
 'use strict';
 
-/**
- * auth.js
- * - Login (user/admin) + Registration (LOCAL users)
- * - Gmail-only validation (client-side)
- * - Unique username validation (client-side)
- * - Reliable message display (fixes “box shows but no text”)
- */
+
 
 const loginForm = document.getElementById('loginForm');
 const registerForm = document.getElementById('registerForm');
 
-/* ========= Message UI (FIXED) ========= */
+
 function showMessage(text, type) {
   const el = document.getElementById('auth-message');
   if (!el) return;
 
   const msg = (text === undefined || text === null) ? '' : String(text);
 
-  // Put text
+  
   el.textContent = msg;
 
-  // Ensure correct classes
+  
   el.classList.remove('hidden', 'success', 'error');
   el.classList.add(type === 'success' ? 'success' : 'error');
 
-  // Force visibility (in case CSS conflicts)
+  
   el.style.display = 'block';
   el.style.visibility = 'visible';
   el.style.opacity = '1';
 }
-//function showMessage(text, type) {
-//  const el = document.getElementById('auth-message');
-//  if (!el) return;
-//
-//  const msg = (text === undefined || text === null) ? '' : String(text);
-//
-//  // Debug (you can remove later)
-//  console.log('[auth-message]', { type, msg, el });
-//
-//  el.textContent = msg;
-//
-//  el.classList.remove('hidden', 'success', 'error');
-//  el.classList.add(type === 'success' ? 'success' : 'error');
-//
-//  // Force visibility + readable text
-//  el.style.display = 'block';
-//  el.style.visibility = 'visible';
-//  el.style.opacity = '1';
-//
-//  el.style.color = '#111';           // ensure text visible
-//  el.style.fontSize = '14px';
-//  el.style.lineHeight = '1.4';
-//  el.style.whiteSpace = 'pre-wrap';  // wrap long text
-//  el.style.padding = '10px 12px';
-//}
 
-/* ========= Helpers ========= */
 function normalizeEmail(email) {
   return (email || '').trim().toLowerCase();
 }
@@ -70,7 +38,7 @@ function normalizeUsername(username) {
 }
 
 function isValidUsername(username) {
-  // 3–20 chars, letters/numbers/dot/underscore only
+  
   return /^[a-z0-9._]{3,20}$/i.test((username || '').trim());
 }
 
@@ -95,7 +63,7 @@ function updateReq(id, valid) {
 }
 
 async function safeJson(res) {
-  // Always return an object with a meaningful message
+  
   const text = await res.text();
 
   if (!text) {
@@ -105,12 +73,12 @@ async function safeJson(res) {
   try {
     return JSON.parse(text);
   } catch {
-    // If backend returned plain text / HTML error
+    
     return { success: false, message: text };
   }
 }
 
-/* ========= Redirect if already logged in ========= */
+
 (function redirectIfAlreadyLoggedIn() {
   const email = localStorage.getItem('userEmail');
   const displayName = localStorage.getItem('displayName');
@@ -119,7 +87,7 @@ async function safeJson(res) {
   }
 })();
 
-/* ========= LOGIN ========= */
+
 if (loginForm) {
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -173,7 +141,7 @@ if (loginForm) {
   });
 }
 
-/* ========= REGISTER ========= */
+
 if (registerForm) {
   const passwordInput = document.getElementById('regPassword');
 
@@ -197,25 +165,25 @@ if (registerForm) {
     const password = document.getElementById('regPassword')?.value ?? '';
     const confirmPassword = document.getElementById('regConfirmPassword')?.value ?? '';
 
-    // Basic required checks
+    
     if (!displayName || !username || !email || !password || !confirmPassword) {
       showMessage('Please fill in all fields.', 'error');
       return;
     }
 
-    // Username rules
+    
     if (!isValidUsername(username)) {
       showMessage('Username must be 3-20 characters and can contain letters, numbers, dot (.) and underscore (_).', 'error');
       return;
     }
 
-    // Gmail-only rule
+    
     if (!isValidGmail(email)) {
       showMessage('Only Gmail addresses are allowed (example@gmail.com).', 'error');
       return;
     }
 
-    // Password match & strength
+    
     if (password !== confirmPassword) {
       showMessage('Passwords do not match.', 'error');
       return;
