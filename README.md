@@ -123,19 +123,19 @@ Handles authentication, authorization, WebSocket configuration, MongoDB setup, p
 
 Add your live demo link here when you deploy the project:
 
-- Live demo: `https://your-demo-link-here`
+- Live demo: `currently not available`
 - GitHub repository: [chat-application](https://github.com/Nocbu/chat-application)
 
 ## Screenshots
 
 Add these screenshots to make the README more attractive:
 
-- Login page
-- Registration page
-- Group chat screen
-- Direct message screen
-- File upload flow
-- Admin actions screen
+- Login page (yet to add)
+- Registration page (yet to add)
+- Group chat screen (yet to add)
+- Direct message screen (yet to add)
+- File upload flow (yet to add)
+- Admin actions screen (yet to add)
 
 ## Setup
 
