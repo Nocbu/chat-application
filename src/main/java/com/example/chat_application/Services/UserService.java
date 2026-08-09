@@ -56,7 +56,6 @@ public class UserService {
             return new AuthResponse(false, "Username is required");
         }
 
-        // username format check (same rule you use later)
         if (!normalizedUsername.matches("^[a-z0-9._]{3,20}$")) {
             return new AuthResponse(false, "Invalid username format");
         }
@@ -102,7 +101,7 @@ public class UserService {
             response.setEmail(adminUsername);
             response.setRole(Role.ADMIN.name());
 
-            // IMPORTANT: set username so DMs can use it
+            // important set username so DMs can use it
             response.setUsername(adminUsername.toLowerCase());
             return response;
         }
@@ -143,7 +142,7 @@ public class UserService {
         response.setEmail(user.getEmail());
         response.setRole(user.getRole().name());
 
-        // IMPORTANT: return username for frontend + session storage
+        // important: return username for frontend + session storage
         response.setUsername(user.getUsername());
 
         return response;

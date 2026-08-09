@@ -35,7 +35,7 @@ public class AuthController {
             session.setAttribute("displayName", response.getDisplayName());
             session.setAttribute("role", response.getRole());
 
-            // IMPORTANT for DMs:
+            // important for DMs:
             session.setAttribute("username", response.getUsername());
 
             response.setSessionId(session.getId());

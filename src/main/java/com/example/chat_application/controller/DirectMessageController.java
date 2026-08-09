@@ -5,12 +5,14 @@ import com.example.chat_application.Services.DirectMessageService;
 import com.example.chat_application.model.ChatMessage;
 import com.example.chat_application.model.MessageType;
 import jakarta.servlet.http.HttpSession;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +40,24 @@ public class DirectMessageController {
         if (username == null) return ResponseEntity.status(401).body(Map.of("success", false, "message", "Not logged in"));
 
         List<ChatMessage> msgs = directMessageService.getDirectHistory(conversationId, username);
+        return ResponseEntity.ok(msgs);
+    }
+
+    @GetMapping("/{conversationId}/search")
+    public ResponseEntity<?> searchHistory(
+            @PathVariable String conversationId,
+            @RequestParam(value = "text", required = false) String text,
+            @RequestParam(value = "sender", required = false) String sender,
+            @RequestParam(value = "fileType", required = false) String fileType,
+            @RequestParam(value = "fromDate", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(value = "toDate", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            HttpSession session) {
+        String username = (String) session.getAttribute("username");
+        if (username == null) return ResponseEntity.status(401).body(Map.of("success", false, "message", "Not logged in"));
+
+        List<ChatMessage> msgs = directMessageService.searchDirectHistory(conversationId, username, text, sender, fileType, fromDate, toDate);
         return ResponseEntity.ok(msgs);
     }
 

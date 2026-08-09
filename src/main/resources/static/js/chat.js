@@ -23,6 +23,15 @@ const tabDirect = document.getElementById('tabDirect');
 
 const dmSearchInput = document.getElementById('dmSearchInput');
 const dmSearchResults = document.getElementById('dmSearchResults');
+const groupSearchPanel = document.getElementById('groupSearchPanel');
+const messageSearchForm = document.getElementById('messageSearchForm');
+const searchTextInput = document.getElementById('searchText');
+const searchSenderInput = document.getElementById('searchSender');
+const searchFileTypeInput = document.getElementById('searchFileType');
+const searchFromDateInput = document.getElementById('searchFromDate');
+const searchToDateInput = document.getElementById('searchToDate');
+const clearMessageSearchBtn = document.getElementById('clearMessageSearch');
+const messageSearchStatus = document.getElementById('messageSearchStatus');
 
 const messageForm = document.getElementById('messageForm');
 const messageInput = document.getElementById('message');
@@ -41,6 +50,7 @@ const replyPreviewCancelBtn = document.getElementById('replyPreviewCancel');
 const dmPresenceDot = document.getElementById('dmPresenceDot');
 const dmConversationList = document.getElementById('dmConversationList');
 const dmTotalBadge = document.getElementById('dmTotalBadge');
+const toastStack = document.getElementById('toast-stack');
 
 let stompClient = null;
 let selectedFile = null;
@@ -49,6 +59,7 @@ let selectedFile = null;
 let mode = 'GROUP'; 
 let activeConversationId = null;
 let activeDmUsername = null;
+let activeSearchScope = 'group';
 
 const dmConvSubscriptions = {};
 
@@ -65,6 +76,8 @@ const onlineUsers = new Set();
 
 let pendingReply = null; 
 
+let groupViewMode = 'history';
+
 
 const colors = [
     '#2196F3', '#32c787', '#00BCD4', '#ff5652',
@@ -73,8 +86,194 @@ const colors = [
 ];
 
 
+let notificationPermissionRequested = false;
+let toastCounter = 0;
+
+
+function requestBrowserNotificationPermission() {
+    if (!('Notification' in window) || notificationPermissionRequested || Notification.permission !== 'default') {
+        return;
+    }
+
+    notificationPermissionRequested = true;
+    Notification.requestPermission().catch(() => {});
+}
+
+
+function canShowBrowserNotification() {
+    return 'Notification' in window && Notification.permission === 'granted';
+}
+
+
+function showBrowserNotification(title, body, tag) {
+    if (!canShowBrowserNotification()) return;
+
+    try {
+        new Notification(title, {
+            body,
+            tag,
+            renotify: true
+        });
+    } catch (error) {
+        console.warn('Browser notification failed:', error);
+    }
+}
+
+
+function showInAppToast(kind, title, body) {
+    if (!toastStack) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${kind}`;
+    toast.setAttribute('role', 'status');
+    toast.setAttribute('aria-live', 'polite');
+
+    const content = document.createElement('div');
+    content.style.flex = '1';
+
+    const toastTitle = document.createElement('div');
+    toastTitle.className = 'toast-title';
+    toastTitle.textContent = title;
+
+    const toastBody = document.createElement('div');
+    toastBody.className = 'toast-body';
+    toastBody.textContent = body;
+
+    content.appendChild(toastTitle);
+    content.appendChild(toastBody);
+
+    const closeButton = document.createElement('button');
+    closeButton.type = 'button';
+    closeButton.className = 'toast-close';
+    closeButton.setAttribute('aria-label', 'Dismiss notification');
+    closeButton.textContent = '×';
+
+    const dismiss = () => {
+        if (!toast.isConnected) return;
+        toast.style.animation = 'toast-out 0.18s ease forwards';
+        window.setTimeout(() => {
+            if (toast.isConnected) toast.remove();
+        }, 180);
+    };
+
+    closeButton.addEventListener('click', dismiss);
+    toast.appendChild(content);
+    toast.appendChild(closeButton);
+    toastStack.appendChild(toast);
+
+    while (toastStack.children.length > 3) {
+        toastStack.firstElementChild?.remove();
+    }
+
+    const toastId = ++toastCounter;
+    window.setTimeout(() => {
+        if (toast.isConnected && toastId <= toastCounter) {
+            dismiss();
+        }
+    }, 5000);
+}
+
+
+function escapeRegex(text) {
+    return (text || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+
+function messageMentionsCurrentUser(message) {
+    const content = (message?.content || '').toLowerCase();
+    if (!content || !username) return false;
+
+    const mentionPattern = new RegExp(`(^|\\W)@${escapeRegex(username)}(\\W|$)`, 'i');
+    return mentionPattern.test(content);
+}
+
+
+function notifyForMention(message) {
+    if (!messageMentionsCurrentUser(message)) return;
+    if ((message.senderUsername || '').toLowerCase() === username) return;
+
+    const shouldNotify = document.hidden || mode !== 'GROUP' || groupViewMode === 'search';
+
+    const preview = truncateText(message.content || 'You were mentioned', 120);
+    if (!document.hidden) {
+        showInAppToast('mention', `Mention from ${message.sender || 'someone'}`, preview);
+    }
+
+    if (!shouldNotify) return;
+
+    showBrowserNotification(
+        `Mention from ${message.sender || 'someone'}`,
+        preview,
+        `mention-${message.id || Date.now()}`
+    );
+}
+
+
+function notifyForDirectMessage(update) {
+    const convId = update.conversationId;
+    if (!convId) return;
+
+    const senderUsername = (update.senderUsername || '').toLowerCase();
+    if (!senderUsername || senderUsername === username) return;
+
+    const isActiveConversation = mode === 'DIRECT' && activeConversationId === convId;
+    const shouldNotify = document.hidden || !isActiveConversation;
+
+    const otherName = update.otherDisplayName || update.otherUsername || senderUsername;
+    const preview = truncateText(update.lastPreview || 'New direct message', 120);
+    if (!document.hidden) {
+        showInAppToast('dm', `New DM from ${otherName}`, preview);
+    }
+
+    if (!shouldNotify) return;
+
+    showBrowserNotification(
+        `New DM from ${otherName}`,
+        preview,
+        `dm-${convId}`
+    );
+}
+
+
+function notifyForAdminAction(message) {
+    const content = message?.content || '';
+    let title = null;
+    let body = null;
+
+    if (content === 'CHAT_CLEARED') {
+        title = 'Admin cleared the chat';
+        body = 'The public chat history was cleared.';
+    } else if (content.startsWith('MESSAGE_DELETED:')) {
+        title = 'Admin deleted a message';
+        body = 'A public chat message was removed.';
+    } else if (content.startsWith('USER_BANNED:')) {
+        const target = content.split(':')[1] || 'a user';
+        title = 'Admin banned a user';
+        body = `User ${target} was banned.`;
+    } else if (content.startsWith('USER_KICKED:')) {
+        const target = content.split(':')[1] || 'a user';
+        title = 'Admin kicked a user';
+        body = `User ${target} was kicked from the chat.`;
+    }
+
+    if (!title || !body) return;
+
+    const shouldNotify = document.hidden || mode !== 'GROUP' || groupViewMode === 'search';
+
+    if (!document.hidden) {
+        showInAppToast('admin', title, body);
+    }
+
+    if (!shouldNotify) return;
+
+    showBrowserNotification(title, body, `admin-${content}`);
+}
+
+
 function init() {
     userInfoElement.textContent = `${displayName} (${userRole})`;
+
+    requestBrowserNotificationPermission();
 
     if (userRole === 'ADMIN') {
         adminPanel.classList.remove('hidden');
@@ -87,6 +286,7 @@ function init() {
     loadChatHistory();
     connect();
     setupDmSearch();
+    setupMessageSearch();
     loadInitialPresence();
     loadConversationSummaries(); 
 
@@ -97,6 +297,14 @@ function init() {
 
 function setMode(newMode) {
     mode = newMode;
+
+    if (groupSearchPanel) {
+        groupSearchPanel.classList.remove('hidden');
+    }
+
+    if (mode === 'GROUP') {
+        activeSearchScope = 'group';
+    }
 
     if (mode === 'GROUP') {
         tabGroup.classList.add('active');
@@ -117,6 +325,7 @@ function setMode(newMode) {
 
 tabGroup.addEventListener('click', () => setMode('GROUP'));
 tabDirect.addEventListener('click', () => {
+    requestBrowserNotificationPermission();
     setMode('DIRECT');
     if (!username) {
         alert("Your username is missing. Please re-login or complete choose-username.");
@@ -168,10 +377,127 @@ async function loadChatHistory() {
     try {
         const response = await fetch('/api/messages/history');
         const messages = await response.json();
-        messages.forEach(msg => renderGroupMessage(msg));
-        messageArea.scrollTop = messageArea.scrollHeight;
+        groupViewMode = 'history';
+        activeSearchScope = 'group';
+        renderGroupMessages(messages, true, 'No messages yet.');
+        updateMessageSearchStatus('Showing recent messages.');
     } catch (error) {
         console.error('Failed to load history:', error);
+    }
+}
+
+function setupMessageSearch() {
+    if (!messageSearchForm) return;
+
+    messageSearchForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        await runMessageSearch();
+    });
+
+    if (clearMessageSearchBtn) {
+        clearMessageSearchBtn.addEventListener('click', async () => {
+            clearMessageSearchFilters();
+            await loadChatHistory();
+        });
+    }
+}
+
+async function runMessageSearch() {
+    const params = new URLSearchParams();
+
+    const text = searchTextInput?.value.trim();
+    const sender = searchSenderInput?.value.trim();
+    const fileType = searchFileTypeInput?.value.trim();
+    const fromDate = searchFromDateInput?.value;
+    const toDate = searchToDateInput?.value;
+
+    if (text) params.set('text', text);
+    if (sender) params.set('sender', sender);
+    if (fileType) params.set('fileType', fileType);
+    if (fromDate) params.set('fromDate', fromDate);
+    if (toDate) params.set('toDate', toDate);
+
+    try {
+        const response = await fetch(buildSearchUrl(params));
+        if (!response.ok) {
+            throw new Error(`Search failed with status ${response.status}`);
+        }
+
+        const messages = await response.json();
+        groupViewMode = 'search';
+        activeSearchScope = mode === 'DIRECT' ? 'direct' : 'group';
+        if (activeSearchScope === 'direct') {
+            renderDirectMessages(messages, true, 'No messages matched your filters.');
+        } else {
+            renderGroupMessages(messages, true, 'No messages matched your filters.');
+        }
+        updateMessageSearchStatus(`${messages.length} message${messages.length === 1 ? '' : 's'} found.`);
+    } catch (error) {
+        console.error('Message search failed:', error);
+        updateMessageSearchStatus('Search failed. Please try again.');
+    }
+}
+
+function buildSearchUrl(params) {
+    if (mode === 'DIRECT' && activeConversationId) {
+        return `/api/messages/direct/${activeConversationId}/search?${params.toString()}`;
+    }
+
+    return `/api/messages/search?${params.toString()}`;
+}
+
+function clearMessageSearchFilters() {
+    if (searchTextInput) searchTextInput.value = '';
+    if (searchSenderInput) searchSenderInput.value = '';
+    if (searchFileTypeInput) searchFileTypeInput.value = '';
+    if (searchFromDateInput) searchFromDateInput.value = '';
+    if (searchToDateInput) searchToDateInput.value = '';
+    updateMessageSearchStatus('');
+}
+
+function updateMessageSearchStatus(text) {
+    if (messageSearchStatus) {
+        messageSearchStatus.textContent = text || '';
+    }
+}
+
+function renderGroupMessages(messages, scrollToBottom = true, emptyText = 'No messages found.') {
+    messageArea.innerHTML = '';
+
+    if (!Array.isArray(messages) || messages.length === 0) {
+        const empty = document.createElement('li');
+        empty.className = 'event-message';
+        empty.textContent = emptyText;
+        messageArea.appendChild(empty);
+        return;
+    }
+
+    messages.forEach(msg => renderGroupMessage(msg));
+
+    if (scrollToBottom) {
+        messageArea.scrollTop = messageArea.scrollHeight;
+    } else {
+        messageArea.scrollTop = 0;
+    }
+}
+
+function renderDirectMessages(messages, scrollToBottom = true, emptyText = 'No messages found.') {
+    dmMessageArea.innerHTML = '';
+
+    if (!Array.isArray(messages) || messages.length === 0) {
+        const empty = document.createElement('li');
+        empty.className = 'event-message';
+        empty.textContent = emptyText;
+        dmMessageArea.appendChild(empty);
+        return;
+    }
+
+    messages.forEach(msg => renderDirectMessage(msg));
+
+    if (scrollToBottom) {
+        dmMessageArea.scrollTop = dmMessageArea.scrollHeight;
+    } else {
+        dmMessageArea.scrollTop = 0;
     }
 }
 
@@ -441,6 +767,8 @@ function onPersonalNotificationReceived(payload) {
     const preview = data.lastPreview || '';
     const lastTimestamp = data.lastTimestamp || null;
     const isFromMe = senderUsername === username;
+
+    notifyForDirectMessage(data);
 
     
     subscribeToConversation(convId);
@@ -746,12 +1074,22 @@ function onGroupMessageReceived(payload) {
         return;
     }
 
+    notifyForMention(message);
+
+    if (mode !== 'GROUP' || groupViewMode === 'search' || activeSearchScope === 'direct') {
+        return;
+    }
+
     renderGroupMessage(message);
     messageArea.scrollTop = messageArea.scrollHeight;
 }
 
 
 function onDirectMessageReceived(payload) {
+    if (mode !== 'DIRECT' || activeSearchScope === 'direct') {
+        return;
+    }
+
     const body = JSON.parse(payload.body);
 
     
@@ -1108,6 +1446,8 @@ async function dmDeleteForEveryone(messageId) {
 
 
 function handleSystemMessage(message) {
+    notifyForAdminAction(message);
+
     const content = message.content;
 
     if (content === 'CHAT_CLEARED') {

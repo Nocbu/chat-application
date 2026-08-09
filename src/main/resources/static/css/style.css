@@ -771,6 +771,98 @@ body {
     border-color: transparent;
 }
 
+
+.toast-stack {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: min(360px, calc(100vw - 32px));
+    z-index: 9999;
+    pointer-events: none;
+}
+
+.toast {
+    pointer-events: auto;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 12px 14px;
+    border-radius: 14px;
+    color: #f8fafc;
+    background: rgba(15, 23, 42, 0.96);
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.28);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(12px);
+    transform: translateY(-8px);
+    opacity: 0;
+    animation: toast-in 0.2s ease forwards;
+}
+
+.toast.toast-dm {
+    border-left: 4px solid #22c55e;
+}
+
+.toast.toast-mention {
+    border-left: 4px solid #38bdf8;
+}
+
+.toast.toast-admin {
+    border-left: 4px solid #f59e0b;
+}
+
+.toast-title {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: #ffffff;
+}
+
+.toast-body {
+    font-size: 13px;
+    line-height: 1.4;
+    color: #cbd5e1;
+    word-break: break-word;
+}
+
+.toast-close {
+    border: none;
+    background: transparent;
+    color: #cbd5e1;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0;
+}
+
+.toast-close:hover {
+    color: #fff;
+}
+
+@keyframes toast-in {
+    from {
+        opacity: 0;
+        transform: translateY(-8px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes toast-out {
+    from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-6px) scale(0.98);
+    }
+}
+
 .chat-main {
     display: flex;
     flex: 1;
@@ -841,6 +933,38 @@ body {
     display: flex;
     flex-direction: column;
     min-width: 0;
+}
+
+.message-search-panel {
+    background: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 12px 14px;
+}
+
+.message-search-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.message-search-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.message-search-row .form-control-sm {
+    min-width: 150px;
+}
+
+.message-search-row-bottom {
+    align-items: center;
+}
+
+.message-search-status {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 600;
 }
 
 .dm-panel {
