@@ -165,7 +165,6 @@ Some features that could be added or improved in future versions:
 * Typing indicators
 * Message reactions
 * Message editing and deletion
-* Push notifications
 * Image previews
 * Improved mobile responsiveness
 * Automated testing
