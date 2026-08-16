@@ -123,7 +123,7 @@ Handles authentication, authorization, WebSocket configuration, MongoDB setup, p
 
 Add your live demo link here when you deploy the project:
 
-- Live demo: `https://your-demo-link-here`
+- Live demo: `currently not available`
 - GitHub repository: [chat-application](https://github.com/Nocbu/chat-application)
 
 ## Screenshots
