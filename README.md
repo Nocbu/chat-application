@@ -128,11 +128,14 @@ Add your live demo link here when you deploy the project:
 
 ## Screenshots
 
-### Chat Interface
-![Chat Application Interface](https://raw.githubusercontent.com/Nocbu/chat-application/main/images/chat_application.png)
+### Group Chat
+![Group World Chat](https://raw.githubusercontent.com/Nocbu/chat-application/main/images/Group-world-chat.png)
 
-### Features in Action
-![Chat Application Features](https://raw.githubusercontent.com/Nocbu/chat-application/main/images/chat_application1.png)
+### Direct Messaging
+![Direct Chat](https://raw.githubusercontent.com/Nocbu/chat-application/main/images/Direct_chat.png)
+
+### Admin Panel
+![Admin Interface](https://raw.githubusercontent.com/Nocbu/chat-application/main/images/Admin.png)
 
 ## Setup
 
