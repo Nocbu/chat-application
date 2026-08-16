@@ -129,10 +129,10 @@ Add your live demo link here when you deploy the project:
 ## Screenshots
 
 ### Chat Interface
-![Chat Application Interface](https://raw.githubusercontent.com/Nocbu/chat-application/main/images/chat_application.png)
+![Chat Application Interface](https://Nocbu/chat-application/main/images/chat_application.png)
 
 ### Features in Action
-![Chat Application Features](https://raw.githubusercontent.com/Nocbu/chat-application/main/images/chat_application1.png)
+![Chat Application Features](https://Nocbu/chat-application/main/images/chat_application1.png)
 
 ## Setup
 
