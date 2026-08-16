@@ -128,14 +128,11 @@ Add your live demo link here when you deploy the project:
 
 ## Screenshots
 
-Add these screenshots to make the README more attractive:
+### Chat Interface
+![Chat Application Interface](images/chat_application.png)
 
-- Login page
-- Registration page
-- Group chat screen
-- Direct message screen
-- File upload flow
-- Admin actions screen
+### Features in Action
+![Chat Application Features](images/chat_application1.png)
 
 ## Setup
 
