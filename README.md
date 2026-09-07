@@ -162,7 +162,7 @@ cd chat-application
 
 ### 3. Configure the application
 
-Update `src/main/resources/application.properties` with your local values:
+Set the sensitive values as environment variables instead of editing them into `application.properties`:
 
 - MongoDB URI and database name
 - Google OAuth client ID and client secret
@@ -171,6 +171,22 @@ Update `src/main/resources/application.properties` with your local values:
 - File upload directory
 
 > Do not commit secrets, passwords, API keys, or OAuth credentials to GitHub.
+
+On Windows PowerShell, set them for the current terminal before starting the application:
+
+```powershell
+$env:ADMIN_USERNAME = "admin"
+$env:ADMIN_PASSWORD = "choose-a-new-password"
+$env:GOOGLE_CLIENT_ID = "your-google-client-id"
+$env:GOOGLE_CLIENT_SECRET = "your-google-client-secret"
+$env:APP_CRYPTO_AES_KEY_BASE64 = "your-base64-aes-key"
+```
+
+```powershell
+[Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Maximum 256 }))
+```
+
+These variables must be set again when opening a new terminal. Never commit the real values.
 
 ### 4. Start MongoDB
 
